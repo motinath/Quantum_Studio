@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Auth
     secret_key: str = "dev-secret-key-change-in-production-minimum-32-chars"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 10080  # 7 days
+    access_token_expire_minutes: int = 2  # 2 minutes
 
     # CORS
     cors_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"

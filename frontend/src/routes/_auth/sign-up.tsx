@@ -44,7 +44,7 @@ interface FormState {
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, isLoading } = useAuth();
   const [form, setForm] = useState<FormState>({
     fullName: "",
     organization: "",
@@ -59,7 +59,7 @@ function SignUpPage() {
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
     if (form.fullName.trim().length < 2) next.fullName = "Enter your full name";
@@ -70,9 +70,15 @@ function SignUpPage() {
     if (!form.terms) next.terms = "You must accept the terms";
     setErrors(next);
     if (Object.keys(next).length) return;
-    signUp(form.fullName, form.email, form.organization);
-    toast.success(`Welcome — you're the Organization Manager for ${form.organization}`);
-    navigate({ to: "/" });
+
+    const res = await signUp(form.fullName, form.email, form.password, form.organization);
+    if (!res.ok) {
+      toast.error(res.error ?? "Registration failed");
+      setErrors({ email: res.error });
+      return;
+    }
+    toast.success(`Welcome to Quantum Studio, ${form.fullName.split(" ")[0]}!`);
+    navigate({ to: "/dashboard" });
   };
 
   return (
@@ -197,8 +203,12 @@ function SignUpPage() {
               </label>
             </div>
 
-            <Button type="submit" className="h-11 w-full rounded-full text-sm font-semibold">
-              Create account
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="h-11 w-full rounded-full text-sm font-semibold"
+            >
+              {isLoading ? "Creating account…" : "Create account"}
             </Button>
           </form>
 
@@ -212,12 +222,12 @@ function SignUpPage() {
             <SocialButton
               provider="google"
               label="Sign up with Google"
-              onClick={() => toast("Demo only")}
+              onClick={() => toast("Coming soon")}
             />
             <SocialButton
               provider="github"
               label="Sign up with GitHub"
-              onClick={() => toast("Demo only")}
+              onClick={() => toast("Coming soon")}
             />
           </div>
         </AuthCard>
