@@ -26,11 +26,23 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 2  # 2 minutes
 
+    # SMTP Settings (optional for registration verification email)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_from_name: str = "Quantum Studio"
+
     # CORS
     cors_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"
 
     # Claude
     anthropic_api_key: str = ""
+
+    # Google OAuth
+    google_client_id: str = ""
+    google_client_secret: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

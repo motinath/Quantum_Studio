@@ -11,6 +11,7 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { SocialButton } from "@/components/auth/social-button";
 import { QuantumHero } from "@/components/auth/quantum-hero";
 import { useAuth } from "@/lib/auth/auth-context";
+import { GoogleLogin } from "@react-oauth/google";
 
 export const Route = createFileRoute("/_auth/sign-in")({
   head: () => ({
@@ -32,10 +33,20 @@ export const Route = createFileRoute("/_auth/sign-in")({
 
 function SignInPage() {
   const navigate = useNavigate();
-  const { signIn, isLoading } = useAuth();
+  const { signIn, signInWithGoogle, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  const handleGoogleLogin = async (credential: string) => {
+    const res = await signInWithGoogle(credential);
+    if (!res.ok) {
+      toast.error(res.error ?? "Google login failed");
+      return;
+    }
+    toast.success("Signed in with Google!");
+    navigate({ to: "/dashboard" });
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,11 +147,21 @@ function SignInPage() {
             </div>
 
             <div className="grid gap-2.5">
-              <SocialButton
-                provider="google"
-                label="Continue with Google"
-                onClick={() => toast("Coming soon")}
-              />
+              <div className="w-full flex justify-center [&>div]:w-full">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    if (credentialResponse.credential) {
+                      await handleGoogleLogin(credentialResponse.credential);
+                    }
+                  }}
+                  onError={() => {
+                    toast.error("Google sign in failed");
+                  }}
+                  theme="outline"
+                  shape="pill"
+                  width="100%"
+                />
+              </div>
               <SocialButton
                 provider="github"
                 label="Continue with GitHub"

@@ -12,6 +12,8 @@ httpx==0.28.1
 networkx==3.4.2
 python-dotenv==1.0.1
 aiofiles==24.1.0
+google-auth==2.29.0
+requests==2.31.0
 
 # Optional: uncomment when you have PostgreSQL installed
 # asyncpg==0.30.0

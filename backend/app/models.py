@@ -93,6 +93,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
+    # OAuth fields
+    oauth_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    oauth_subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     projects: Mapped[list["Project"]] = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     chat_history: Mapped[list["ChatHistory"]] = relationship("ChatHistory", back_populates="user", cascade="all, delete-orphan")
 

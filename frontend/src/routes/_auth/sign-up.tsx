@@ -11,6 +11,8 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { SocialButton } from "@/components/auth/social-button";
 import { QuantumHero } from "@/components/auth/quantum-hero";
 import { useAuth } from "@/lib/auth/auth-context";
+import { sendOTP } from "@/lib/api/backend";
+import { GoogleLogin } from "@react-oauth/google";
 
 export const Route = createFileRoute("/_auth/sign-up")({
   head: () => ({
@@ -44,7 +46,20 @@ interface FormState {
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { signUp, isLoading } = useAuth();
+  const { signUp, signInWithGoogle, isLoading } = useAuth();
+  const [step, setStep] = useState<"details" | "otp">("details");
+  const [otp, setOtp] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+
+  const handleGoogleLogin = async (credential: string) => {
+    const res = await signInWithGoogle(credential);
+    if (!res.ok) {
+      toast.error(res.error ?? "Google sign up failed");
+      return;
+    }
+    toast.success("Signed in with Google!");
+    navigate({ to: "/dashboard" });
+  };
   const [form, setForm] = useState<FormState>({
     fullName: "",
     organization: "",
@@ -54,31 +69,68 @@ function SignUpPage() {
     terms: false,
     updates: true,
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState | "otp", string>>>({});
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const next: typeof errors = {};
-    if (form.fullName.trim().length < 2) next.fullName = "Enter your full name";
-    if (form.organization.trim().length < 2) next.organization = "Enter your organization";
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = "Enter a valid email";
-    if (form.password.length < 8) next.password = "At least 8 characters";
-    if (form.password !== form.confirm) next.confirm = "Passwords don't match";
-    if (!form.terms) next.terms = "You must accept the terms";
-    setErrors(next);
-    if (Object.keys(next).length) return;
+    setErrors({});
 
-    const res = await signUp(form.fullName, form.email, form.password, form.organization);
-    if (!res.ok) {
-      toast.error(res.error ?? "Registration failed");
-      setErrors({ email: res.error });
-      return;
+    if (step === "details") {
+      const next: Partial<Record<keyof FormState, string>> = {};
+      if (form.fullName.trim().length < 2) next.fullName = "Enter your full name";
+      if (form.organization.trim().length < 2) next.organization = "Enter your organization";
+      if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = "Enter a valid email";
+      if (form.password.length < 8) next.password = "At least 8 characters";
+      if (form.password !== form.confirm) next.confirm = "Passwords don't match";
+      if (!form.terms) next.terms = "You must accept the terms";
+      setErrors(next);
+      if (Object.keys(next).length) return;
+
+      setSendingOtp(true);
+      try {
+        await sendOTP(form.email);
+        toast.success("Verification code sent!", {
+          description: "Please check your email inbox or developer terminal logs.",
+        });
+        setStep("otp");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to send code";
+        toast.error(msg);
+        setErrors({ email: msg });
+      } finally {
+        setSendingOtp(false);
+      }
+    } else {
+      if (otp.length !== 6) {
+        setErrors({ otp: "Enter the 6-digit code" });
+        return;
+      }
+
+      const res = await signUp(form.fullName, form.email, form.password, form.organization, otp);
+      if (!res.ok) {
+        const errMsg = res.error ?? "Registration failed";
+        toast.error(errMsg);
+        setErrors({ otp: errMsg });
+        return;
+      }
+      toast.success(`Welcome to Quantum Studio, ${form.fullName.split(" ")[0]}!`);
+      navigate({ to: "/dashboard" });
     }
-    toast.success(`Welcome to Quantum Studio, ${form.fullName.split(" ")[0]}!`);
-    navigate({ to: "/dashboard" });
+  };
+
+  const resendOtp = async () => {
+    setSendingOtp(true);
+    try {
+      await sendOTP(form.email);
+      toast.success("Verification code resent successfully!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send code");
+    } finally {
+      setSendingOtp(false);
+    }
   };
 
   return (
@@ -98,138 +150,208 @@ function SignUpPage() {
 
       <section className="flex items-center justify-center py-6 lg:py-12">
         <AuthCard
-          title="Create your account"
-          subtitle="Free to start. No credit card required."
+          title={step === "details" ? "Create your account" : "Verify your email"}
+          subtitle={
+            step === "details"
+              ? "Free to start. No credit card required."
+              : `We sent a 6-digit code to ${form.email}`
+          }
           footer={
-            <>
-              Already have an account?{" "}
-              <Link to="/sign-in" className="font-medium text-accent hover:text-accent/80">
-                Sign in
-              </Link>
-            </>
+            step === "details" ? (
+              <>
+                Already have an account?{" "}
+                <Link to="/sign-in" className="font-medium text-accent hover:text-accent/80">
+                  Sign in
+                </Link>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setStep("details")}
+                className="font-medium text-accent hover:text-accent/80 cursor-pointer border-none bg-transparent"
+              >
+                ← Back to details
+              </button>
+            )
           }
         >
-          <form onSubmit={onSubmit} className="space-y-4" noValidate>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label="Full name" htmlFor="fullName" error={errors.fullName}>
+          {step === "details" ? (
+            <form onSubmit={onSubmit} className="space-y-4" noValidate>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Full name" htmlFor="fullName" error={errors.fullName}>
+                  <Input
+                    id="fullName"
+                    autoComplete="name"
+                    placeholder="Ada Lovelace"
+                    value={form.fullName}
+                    onChange={(e) => update("fullName", e.target.value)}
+                    className="h-11"
+                  />
+                </FormField>
+                <FormField label="Organization" htmlFor="org" error={errors.organization}>
+                  <Input
+                    id="org"
+                    autoComplete="organization"
+                    placeholder="Acme Quantum"
+                    value={form.organization}
+                    onChange={(e) => update("organization", e.target.value)}
+                    className="h-11"
+                  />
+                </FormField>
+              </div>
+              <FormField label="Work email" htmlFor="email" error={errors.email}>
                 <Input
-                  id="fullName"
-                  autoComplete="name"
-                  placeholder="Ada Lovelace"
-                  value={form.fullName}
-                  onChange={(e) => update("fullName", e.target.value)}
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
                   className="h-11"
                 />
               </FormField>
-              <FormField label="Organization" htmlFor="org" error={errors.organization}>
-                <Input
-                  id="org"
-                  autoComplete="organization"
-                  placeholder="Acme Quantum"
-                  value={form.organization}
-                  onChange={(e) => update("organization", e.target.value)}
+              <FormField
+                label="Password"
+                htmlFor="password"
+                error={errors.password}
+                hint="At least 8 characters"
+              >
+                <PasswordInput
+                  id="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(e) => update("password", e.target.value)}
                   className="h-11"
                 />
               </FormField>
-            </div>
-            <FormField label="Work email" htmlFor="email" error={errors.email}>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                value={form.email}
-                onChange={(e) => update("email", e.target.value)}
-                className="h-11"
-              />
-            </FormField>
-            <FormField
-              label="Password"
-              htmlFor="password"
-              error={errors.password}
-              hint="At least 8 characters"
-            >
-              <PasswordInput
-                id="password"
-                autoComplete="new-password"
-                value={form.password}
-                onChange={(e) => update("password", e.target.value)}
-                className="h-11"
-              />
-            </FormField>
-            <FormField label="Confirm password" htmlFor="confirm" error={errors.confirm}>
-              <PasswordInput
-                id="confirm"
-                autoComplete="new-password"
-                value={form.confirm}
-                onChange={(e) => update("confirm", e.target.value)}
-                className="h-11"
-              />
-            </FormField>
-
-            <div className="space-y-2.5 pt-1">
-              <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                <Checkbox
-                  id="terms"
-                  checked={form.terms}
-                  onCheckedChange={(v) => update("terms", Boolean(v))}
-                  className="mt-0.5"
+              <FormField label="Confirm password" htmlFor="confirm" error={errors.confirm}>
+                <PasswordInput
+                  id="confirm"
+                  autoComplete="new-password"
+                  value={form.confirm}
+                  onChange={(e) => update("confirm", e.target.value)}
+                  className="h-11"
                 />
-                <span>
-                  I agree to the{" "}
-                  <a href="#" className="text-foreground underline">
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a href="#" className="text-foreground underline">
-                    Privacy Policy
-                  </a>
-                  .
-                </span>
-              </label>
-              {errors.terms && (
-                <p className="pl-7 text-xs text-destructive" role="alert">
-                  {errors.terms}
-                </p>
-              )}
-              <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                <Checkbox
-                  id="updates"
-                  checked={form.updates}
-                  onCheckedChange={(v) => update("updates", Boolean(v))}
-                  className="mt-0.5"
+              </FormField>
+
+              <div className="space-y-2.5 pt-1">
+                <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox
+                    id="terms"
+                    checked={form.terms}
+                    onCheckedChange={(v) => update("terms", Boolean(v))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <a href="#" className="text-foreground underline">
+                      Terms of Service
+                    </a>{" "}
+                    and{" "}
+                    <a href="#" className="text-foreground underline">
+                      Privacy Policy
+                    </a>
+                    .
+                  </span>
+                </label>
+                {errors.terms && (
+                  <p className="pl-7 text-xs text-destructive" role="alert">
+                    {errors.terms}
+                  </p>
+                )}
+                <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox
+                    id="updates"
+                    checked={form.updates}
+                    onCheckedChange={(v) => update("updates", Boolean(v))}
+                    className="mt-0.5"
+                  />
+                  <span>Send me product updates and quantum research news.</span>
+                </label>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={sendingOtp}
+                className="h-11 w-full rounded-full text-sm font-semibold cursor-pointer"
+              >
+                {sendingOtp ? "Sending code…" : "Send verification code"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-6" noValidate>
+              <FormField
+                label="Verification Code"
+                htmlFor="otp"
+                error={errors.otp}
+                hint="Enter the 6-digit code printed in the backend terminal logs"
+              >
+                <Input
+                  id="otp"
+                  type="text"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  className="h-12 text-center text-xl font-bold tracking-[0.5em] placeholder:tracking-normal placeholder:font-normal"
                 />
-                <span>Send me product updates and quantum research news.</span>
-              </label>
-            </div>
+              </FormField>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="h-11 w-full rounded-full text-sm font-semibold"
-            >
-              {isLoading ? "Creating account…" : "Create account"}
-            </Button>
-          </form>
+              <div className="space-y-3">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="h-11 w-full rounded-full text-sm font-semibold cursor-pointer"
+                >
+                  {isLoading ? "Verifying…" : "Verify & Create Account"}
+                </Button>
 
-          <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            <span>or sign up with</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
+                <div className="text-center text-sm">
+                  <button
+                    type="button"
+                    disabled={sendingOtp}
+                    onClick={resendOtp}
+                    className="text-muted-foreground hover:text-foreground underline cursor-pointer disabled:opacity-50 border-none bg-transparent"
+                  >
+                    {sendingOtp ? "Sending new code…" : "Resend code"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
 
-          <div className="grid gap-2.5">
-            <SocialButton
-              provider="google"
-              label="Sign up with Google"
-              onClick={() => toast("Coming soon")}
-            />
-            <SocialButton
-              provider="github"
-              label="Sign up with GitHub"
-              onClick={() => toast("Coming soon")}
-            />
-          </div>
+          {step === "details" && (
+            <>
+              <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
+                <span>or sign up with</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="grid gap-2.5">
+                <div className="w-full flex justify-center [&>div]:w-full">
+                  <GoogleLogin
+                    onSuccess={async (credentialResponse) => {
+                      if (credentialResponse.credential) {
+                        await handleGoogleLogin(credentialResponse.credential);
+                      }
+                    }}
+                    onError={() => {
+                      toast.error("Google sign up failed");
+                    }}
+                    theme="outline"
+                    shape="pill"
+                    width="100%"
+                  />
+                </div>
+                <SocialButton
+                  provider="github"
+                  label="Sign up with GitHub"
+                  onClick={() => toast("Coming soon")}
+                />
+              </div>
+            </>
+          )}
         </AuthCard>
       </section>
     </div>

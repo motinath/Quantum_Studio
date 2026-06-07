@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { loginUser, registerUser, getCurrentUser } from "@/lib/api/backend";
+import { loginUser, registerUser, getCurrentUser, loginWithGoogle } from "@/lib/api/backend";
+import { toast } from "sonner";
 
 export type UserRole = "admin" | "org_manager" | "engineer";
 
@@ -39,7 +40,9 @@ interface AuthContextType {
     email: string,
     password: string,
     organization: string,
+    otp: string,
   ) => Promise<{ ok: boolean; error?: string }>;
+  signInWithGoogle: (idToken: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -171,10 +174,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: string,
       password: string,
       organization: string,
+      otp: string,
     ): Promise<{ ok: boolean; error?: string }> => {
       setIsLoading(true);
       try {
-        const data = await registerUser(name, email, password, organization);
+        const data = await registerUser(name, email, password, organization, otp);
         const registeredUser: User = {
           id: data.user.id,
           name: data.user.name,
@@ -207,8 +211,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("[Auth] signed out, tokens cleared");
   }, []);
 
+  const signInWithGoogle = useCallback(
+    async (idToken: string): Promise<{ ok: boolean; error?: string }> => {
+      setIsLoading(true);
+      try {
+        const data = await loginWithGoogle(idToken);
+        const loggedInUser: User = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role as UserRole,
+          organization: data.user.organization,
+          initials: data.user.initials,
+        };
+        setStorageItem(TOKEN_KEY, data.access_token);
+        setStorageItem(USER_KEY, JSON.stringify(loggedInUser));
+        setUser(loggedInUser);
+        console.log("[Auth] Google signIn success, token stored:", !!data.access_token);
+        return { ok: true };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Google login failed";
+        console.error("[Auth] Google signIn failed:", message);
+        return { ok: false, error: message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Idle timeout of 2 minutes
+  useEffect(() => {
+    if (!user) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        signOut();
+        toast.warning("Session Expired", {
+          description: "You have been logged out due to 2 minutes of inactivity.",
+        });
+      }, 120000); // 2 minutes (120000 ms)
+    };
+
+    // Events to monitor for activity
+    const events = ["mousemove", "mousedown", "keypress", "scroll", "touchstart", "click"];
+
+    // Set up listeners
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Initial start
+    resetTimer();
+
+    // Clean up
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user, signOut]);
+
   return (
-    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut, signInWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

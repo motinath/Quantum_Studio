@@ -415,11 +415,12 @@ export async function registerUser(
   email: string,
   password: string,
   organization: string,
+  otp: string,
 ): Promise<AuthResponse> {
   const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password, organization }),
+    body: JSON.stringify({ name, email, password, organization, otp }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: "Registration failed" }));
@@ -434,6 +435,41 @@ export async function registerUser(
     }
   } catch (e) {
     console.warn("[API] registerUser: failed to store token", e);
+  }
+  return data;
+}
+
+export async function sendOTP(email: string): Promise<{ detail: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to send code" }));
+    throw new Error(body.detail ?? "Failed to send code");
+  }
+  return res.json();
+}
+
+export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: idToken }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Google login failed" }));
+    throw new Error(body.detail ?? "Google login failed");
+  }
+  const data: AuthResponse = await res.json();
+  try {
+    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("qs_token", data.access_token);
+      console.log("[API] loginWithGoogle: token stored in localStorage");
+    }
+  } catch (e) {
+    console.warn("[API] loginWithGoogle: failed to store token", e);
   }
   return data;
 }
