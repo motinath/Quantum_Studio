@@ -1,4 +1,4 @@
-import type { GenerateResponse, PlacementQubit } from "@/lib/api/backend";
+import type { GenerateResponse, PlacementEdge, PlacementQubit } from "@/lib/api/backend";
 
 // ---------- Types ----------
 
@@ -244,39 +244,65 @@ export function fromGenerateResponse(result: GenerateResponse | null): EditorSta
     params: { ...getDefForType("TransmonPocket").defaultParams },
   }));
 
-  // Auto-derive connections from nearest-neighbor meanders (same heuristic as designer)
   const connections: EditorConnection[] = [];
-  for (let i = 0; i < qubits.length; i++) {
-    for (let j = i + 1; j < qubits.length; j++) {
-      const q1 = qubits[i];
-      const q2 = qubits[j];
-      const dist = Math.hypot(q1.x - q2.x, q1.y - q2.y);
-      if (dist < 2.5) {
-        connections.push({
-          id: `conn_${q1.name}_${q2.name}`,
-          fromComp: `comp_${q1.name}`,
-          fromPin: "a",
-          toComp: `comp_${q2.name}`,
-          toPin: "b",
-        });
+
+  // Prefer backend topology edges; fall back to proximity only for legacy/client results.
+  const placementEdges = result.placement?.edges ?? [];
+  if (placementEdges.length > 0) {
+    placementEdges.forEach((edge, idx) => {
+      connections.push({
+        id: `conn_${edge.qubit_a}_${edge.qubit_b}_${idx}`,
+        fromComp: `comp_${edge.qubit_a}`,
+        fromPin: edge.pin_a ?? "a",
+        toComp: `comp_${edge.qubit_b}`,
+        toPin: edge.pin_b ?? "b",
+      });
+    });
+  } else {
+    for (let i = 0; i < qubits.length; i++) {
+      for (let j = i + 1; j < qubits.length; j++) {
+        const q1 = qubits[i];
+        const q2 = qubits[j];
+        const dist = Math.hypot(q1.x - q2.x, q1.y - q2.y);
+        if (dist < 2.5) {
+          connections.push({
+            id: `conn_${q1.name}_${q2.name}`,
+            fromComp: `comp_${q1.name}`,
+            fromPin: "a",
+            toComp: `comp_${q2.name}`,
+            toPin: "b",
+          });
+        }
       }
     }
   }
 
   // Add resonator components from frequency_plan
   const resonatorEntries = Object.entries(result.frequency_plan?.resonator_frequencies_GHz ?? {});
-  const baseX = qubits.length ? Math.min(...qubits.map((q) => q.x)) : 0;
-  const baseY = qubits.length ? Math.max(...qubits.map((q) => q.y)) + 1.0 : 1.0;
   resonatorEntries.forEach(([name], idx) => {
+    const targetName = name.replace(/^RO_/, "");
+    const target = qubits.find((q) => q.name === targetName);
+    const angle = (idx / Math.max(1, resonatorEntries.length)) * Math.PI * 2;
+    const x = target ? target.x + Math.cos(angle) * 0.65 : idx * 0.8;
+    const y = target ? target.y + Math.sin(angle) * 0.65 : 1.0;
     components.push({
       id: `comp_${name}`,
       type: "ResonatorCoilRect",
       name,
-      x: baseX + idx * 0.8,
-      y: baseY,
+      x,
+      y,
       orientation: 0,
       params: { ...getDefForType("ResonatorCoilRect").defaultParams },
     });
+    if (target) {
+      connections.push({
+        id: `conn_${target.name}_${name}`,
+        fromComp: `comp_${target.name}`,
+        fromPin: "readout",
+        toComp: `comp_${name}`,
+        toPin: "in",
+      });
+    }
   });
 
   return { ...state, components, connections };
@@ -303,6 +329,26 @@ export function toGenerateResponse(
       prev?.frequency_plan?.resonator_frequencies_GHz?.[c.name] ?? 6 + i * 0.05;
     resonator_lengths_mm[c.name] = prev?.frequency_plan?.resonator_lengths_mm?.[c.name] ?? 7.5;
   });
+
+  const qubitIds = new Set(qubitComps.map((c) => c.id));
+  const qubitNameById = new Map(qubitComps.map((c) => [c.id, c.name]));
+  const edgesByKey = new Map<string, PlacementEdge>();
+  state.connections.forEach((conn, i) => {
+    if (!qubitIds.has(conn.fromComp) || !qubitIds.has(conn.toComp)) return;
+    const qubitA = qubitNameById.get(conn.fromComp);
+    const qubitB = qubitNameById.get(conn.toComp);
+    if (!qubitA || !qubitB || qubitA === qubitB) return;
+    const key = [qubitA, qubitB].sort().join("__");
+    if (edgesByKey.has(key)) return;
+    edgesByKey.set(key, {
+      qubit_a: qubitA,
+      pin_a: conn.fromPin,
+      qubit_b: qubitB,
+      pin_b: conn.toPin,
+      label: `editor_bus_${i + 1}`,
+    });
+  });
+  const placementEdges = Array.from(edgesByKey.values());
 
   const base: GenerateResponse = {
     label: prev?.label ?? `${placementQubits.length}-Qubit Custom`,
@@ -334,8 +380,15 @@ export function toGenerateResponse(
           detunings_GHz: {},
           warnings: [],
         },
-    placement: { solver: prev?.placement?.solver ?? "editor", qubits: placementQubits },
+    placement: {
+      ...(prev?.placement ?? {}),
+      solver: prev?.placement?.solver ?? "editor",
+      qubits: placementQubits,
+      edges: placementEdges,
+    },
     code: exportToPython(state),
+    material: prev?.material,
+    ml_prediction: prev?.ml_prediction,
     error_hint: prev?.error_hint,
   };
   return base;

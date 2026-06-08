@@ -1,5 +1,8 @@
 """
 Application configuration — loaded from environment / .env file.
+
+Dev tip: copy .env.example → .env and set DATABASE_URL=sqlite+aiosqlite:///./dev.db
+for zero-setup local development (no Postgres required).
 """
 
 from __future__ import annotations
@@ -14,11 +17,11 @@ class Settings(BaseSettings):
     app_env: str = "development"
     max_qubits: int = 256
 
-    # Database
-    database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/quantum_studio"
-    sync_database_url: str = "postgresql://postgres:password@localhost:5432/quantum_studio"
+    # Database — defaults to SQLite for zero-setup local dev
+    database_url: str = "sqlite+aiosqlite:///./dev.db"
+    sync_database_url: str = "sqlite:///./dev.db"
 
-    # Redis
+    # Redis (optional — only needed for task queues in production)
     redis_url: str = "redis://localhost:6379/0"
 
     # Auth
@@ -34,10 +37,10 @@ class Settings(BaseSettings):
     smtp_from_email: str = ""
     smtp_from_name: str = "Quantum Studio"
 
-    # CORS
+    # CORS — localhost ports used by Vite dev server
     cors_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"
 
-    # Claude
+    # Claude / Anthropic (optional — falls back to rule-based assistant if empty)
     anthropic_api_key: str = ""
 
     # Google OAuth
@@ -56,6 +59,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def is_sqlite(self) -> bool:
+        return self.database_url.startswith("sqlite")
 
 
 settings = Settings()

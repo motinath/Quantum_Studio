@@ -99,18 +99,23 @@ async def run_simulation(
     Run a simulation analytically (physics engine).
     In production this would dispatch to Palace/scqubits workers.
     """
-    result = await db.execute(select(Simulation).where(Simulation.id == sim_id))
+    # Verify ownership BEFORE mutating any state
+    result = await db.execute(
+        select(Simulation)
+        .join(Project, Simulation.project_id == Project.id)
+        .where(Simulation.id == sim_id, Project.owner_id == user.id)
+    )
     sim = result.scalar_one_or_none()
     if not sim:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    # Verify ownership
+    # Fetch the project (already verified ownership above)
     proj_result = await db.execute(
-        select(Project).where(Project.id == sim.project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == sim.project_id)
     )
     project = proj_result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=404, detail="Project not found")
 
     # Run physics analysis
     sim.status = SimulationStatus.running

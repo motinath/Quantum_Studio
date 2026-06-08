@@ -16,7 +16,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models import Project, QCLangFile, User
 from app.qclang.ast_nodes import ast_to_dict
-from app.qclang.compiler import compile_program, MATERIALS
+from app.qclang.compiler import compile_program
 from app.qclang.lexer import LexerError
 from app.qclang.parser import ParseError, parse
 from app.qclang.validator import validate
@@ -392,97 +392,100 @@ async def get_templates() -> list[dict[str, str]]:
 
 # ── Built-in .qc templates ────────────────────────────────────────────────────
 
-_TEMPLATE_CHAIN = """chip LinearChain5Q
+_TEMPLATE_CHAIN = """# 5-Qubit Linear Chain — nearest-neighbor transmon coupling
+chip LinearChain5Q
   variable target_frequency = 5.0
   variable substrate = "silicon"
   variable metal = "aluminum"
 
-  qubit Q0 type=transmon frequency=4.9
-  qubit Q1 type=transmon frequency=5.1
-  qubit Q2 type=transmon frequency=4.92
-  qubit Q3 type=transmon frequency=5.08
-  qubit Q4 type=transmon frequency=4.95
+  qubit Q1 type=transmon frequency=4.9
+  qubit Q2 type=transmon frequency=5.1
+  qubit Q3 type=transmon frequency=4.92
+  qubit Q4 type=transmon frequency=5.08
+  qubit Q5 type=transmon frequency=4.95
 
-  coupler C0 connect(Q0,Q1)
   coupler C1 connect(Q1,Q2)
   coupler C2 connect(Q2,Q3)
   coupler C3 connect(Q3,Q4)
+  coupler C4 connect(Q4,Q5)
 
-  readout R0 connect(Q0)
-  readout R1 connect(Q1)
-  readout R2 connect(Q2)
-  readout R3 connect(Q3)
-  readout R4 connect(Q4)
+  readout RO_Q1 connect(Q1)
+  readout RO_Q2 connect(Q2)
+  readout RO_Q3 connect(Q3)
+  readout RO_Q4 connect(Q4)
+  readout RO_Q5 connect(Q5)
 end"""
 
-_TEMPLATE_GRID = """chip Grid3x3
+_TEMPLATE_GRID = """# 9-Qubit 3×3 Grid — all nearest-neighbor couplings
+chip Grid3x3
 
   variable target_frequency = 5.0
   variable substrate = "sapphire"
   variable metal = "aluminum"
 
-  qubit Q0 type=transmon frequency=4.9
-  qubit Q1 type=transmon frequency=5.1
-  qubit Q2 type=transmon frequency=4.92
-  qubit Q3 type=transmon frequency=5.08
-  qubit Q4 type=transmon frequency=4.95
-  qubit Q5 type=transmon frequency=5.12
-  qubit Q6 type=transmon frequency=4.88
-  qubit Q7 type=transmon frequency=5.05
-  qubit Q8 type=transmon frequency=4.97
+  qubit Q1 type=transmon frequency=4.9
+  qubit Q2 type=transmon frequency=5.1
+  qubit Q3 type=transmon frequency=4.92
+  qubit Q4 type=transmon frequency=5.08
+  qubit Q5 type=transmon frequency=4.95
+  qubit Q6 type=transmon frequency=5.12
+  qubit Q7 type=transmon frequency=4.88
+  qubit Q8 type=transmon frequency=5.05
+  qubit Q9 type=transmon frequency=4.97
 
-  coupler C0 connect(Q0,Q1)
-  coupler C1 connect(Q1,Q2)
-  coupler C2 connect(Q3,Q4)
-  coupler C3 connect(Q4,Q5)
-  coupler C4 connect(Q6,Q7)
-  coupler C5 connect(Q7,Q8)
-  coupler C6 connect(Q0,Q3)
-  coupler C7 connect(Q1,Q4)
-  coupler C8 connect(Q2,Q5)
-  coupler C9 connect(Q3,Q6)
+  coupler C1  connect(Q1,Q2)
+  coupler C2  connect(Q2,Q3)
+  coupler C3  connect(Q4,Q5)
+  coupler C4  connect(Q5,Q6)
+  coupler C5  connect(Q7,Q8)
+  coupler C6  connect(Q8,Q9)
+  coupler C7  connect(Q1,Q4)
+  coupler C8  connect(Q2,Q5)
+  coupler C9  connect(Q3,Q6)
   coupler C10 connect(Q4,Q7)
   coupler C11 connect(Q5,Q8)
+  coupler C12 connect(Q6,Q9)
 
-  readout R0 connect(Q0)
-  readout R1 connect(Q1)
-  readout R2 connect(Q2)
-  readout R3 connect(Q3)
-  readout R4 connect(Q4)
-  readout R5 connect(Q5)
-  readout R6 connect(Q6)
-  readout R7 connect(Q7)
-  readout R8 connect(Q8)
+  readout RO_Q1 connect(Q1)
+  readout RO_Q2 connect(Q2)
+  readout RO_Q3 connect(Q3)
+  readout RO_Q4 connect(Q4)
+  readout RO_Q5 connect(Q5)
+  readout RO_Q6 connect(Q6)
+  readout RO_Q7 connect(Q7)
+  readout RO_Q8 connect(Q8)
+  readout RO_Q9 connect(Q9)
 end"""
 
-_TEMPLATE_HEAVY_HEX = """chip HeavyHex7Q
+_TEMPLATE_HEAVY_HEX = """# 7-Qubit Heavy-Hex — IBM-style topology (Falcon/Hummingbird variant)
+chip HeavyHex7Q
 
   variable target_frequency = 5.0
   variable substrate = "silicon"
   variable metal = "niobium"
 
-  qubit Q0 type=transmon frequency=4.9
-  qubit Q1 type=transmon frequency=5.1
-  qubit Q2 type=transmon frequency=4.92
-  qubit Q3 type=transmon frequency=5.08
-  qubit Q4 type=transmon frequency=4.95
-  qubit Q5 type=transmon frequency=5.12
-  qubit Q6 type=transmon frequency=4.88
+  qubit Q1 type=transmon frequency=4.9
+  qubit Q2 type=transmon frequency=5.1
+  qubit Q3 type=transmon frequency=4.92
+  qubit Q4 type=transmon frequency=5.08
+  qubit Q5 type=transmon frequency=4.95
+  qubit Q6 type=transmon frequency=5.12
+  qubit Q7 type=transmon frequency=4.88
 
-  coupler C0 connect(Q0,Q1)
   coupler C1 connect(Q1,Q2)
   coupler C2 connect(Q2,Q3)
   coupler C3 connect(Q3,Q4)
   coupler C4 connect(Q4,Q5)
   coupler C5 connect(Q5,Q6)
-  coupler C6 connect(Q0,Q3)
-  coupler C7 connect(Q3,Q6)
+  coupler C6 connect(Q6,Q7)
+  coupler C7 connect(Q1,Q4)
+  coupler C8 connect(Q4,Q7)
 
-  readout R0 connect(Q0)
-  readout R1 connect(Q1)
-  readout R2 connect(Q2)
-  readout R3 connect(Q3)
-  readout R4 connect(Q4)
-  readout R5 connect(Q5)
-  readout R6 connect(Q6)
+  readout RO_Q1 connect(Q1)
+  readout RO_Q2 connect(Q2)
+  readout RO_Q3 connect(Q3)
+  readout RO_Q4 connect(Q4)
+  readout RO_Q5 connect(Q5)
+  readout RO_Q6 connect(Q6)
+  readout RO_Q7 connect(Q7)
 end"""

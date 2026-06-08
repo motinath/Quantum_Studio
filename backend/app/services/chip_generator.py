@@ -25,10 +25,12 @@ from app.qclang.ast_nodes import (
     QubitNode,
     ReadoutNode,
 )
-from app.qclang.compiler import generate_qiskit_code, MATERIALS
+from app.qclang.compiler import generate_qiskit_code
 
-# ── Upgrade: use backend2 physics engine ────────────────────────────────────
+# ── Single source of truth for materials ─────────────────────────────────────
+from app.services.materials import MATERIALS, get_material, get_physics_substrate
 
+# ── Physics engine ────────────────────────────────────────────────────────────
 from app.services.physics.frequency_planner import FrequencyPlanner, plan_chip
 from app.services.physics.topology_router import place_qubits, placement_to_dict
 from app.services.physics.drc import run_drc
@@ -40,71 +42,6 @@ try:
     _ML_AVAILABLE = True
 except Exception:
     _ML_AVAILABLE = False
-
-
-# ── Material parameters database ─────────────────────────────────────────────
-
-MATERIALS: dict[str, dict[str, Any]] = {
-    "silicon": {
-        "label": "Silicon (Si)",
-        "epsilon_r": 11.45,
-        "loss_tangent": 1e-6,
-        "substrate_thickness_um": 500,
-        "cpw_width_um": 10.0,
-        "cpw_gap_um": 6.0,
-        "description": "Standard substrate for superconducting qubits",
-    },
-    "sapphire": {
-        "label": "Sapphire (Al₂O₃)",
-        "epsilon_r": 9.3,
-        "loss_tangent": 3e-8,
-        "substrate_thickness_um": 430,
-        "cpw_width_um": 10.0,
-        "cpw_gap_um": 6.0,
-        "description": "Ultra-low-loss substrate, preferred for high-coherence devices",
-    },
-    "silicon_nitride": {
-        "label": "Silicon Nitride (SiN)",
-        "epsilon_r": 7.5,
-        "loss_tangent": 5e-5,
-        "substrate_thickness_um": 300,
-        "cpw_width_um": 10.0,
-        "cpw_gap_um": 6.0,
-        "description": "Used for suspended resonators and kinetic inductance devices",
-    },
-    "aluminum": {
-        "label": "Aluminum (Al)",
-        "metal_type": "superconductor",
-        "Tc_K": 1.2,
-        "london_penetration_depth_nm": 16,
-        "description": "Standard superconducting metal for qubits and resonators",
-    },
-    "niobium": {
-        "label": "Niobium (Nb)",
-        "metal_type": "superconductor",
-        "Tc_K": 9.2,
-        "london_penetration_depth_nm": 39,
-        "description": "High-Tc superconductor used in resonators and transmission lines",
-    },
-    "tantalum": {
-        "label": "Tantalum (Ta)",
-        "metal_type": "superconductor",
-        "Tc_K": 4.5,
-        "london_penetration_depth_nm": 96,
-        "description": "Alpha-phase Ta shows exceptional T1 times (>300 µs)",
-    },
-    "nbtin": {
-        "label": "Niobium Titanium Nitride (NbTiN)",
-        "metal_type": "superconductor",
-        "Tc_K": 15.0,
-        "london_penetration_depth_nm": 200,
-        "description": "High kinetic inductance; used for KID detectors and SNAIL arrays",
-    },
-}
-
-
-def get_material(name: str) -> dict[str, Any]:
-    return MATERIALS.get(name.lower(), MATERIALS["silicon"])
 
 
 # ── Prompt parsing ────────────────────────────────────────────────────────────
@@ -250,9 +187,10 @@ def _build_program(
     qubit_type: str,
     target_freq: float,
 ) -> Program:
+    # Use 1-indexed names (Q1, Q2, ...) to match topology_router and frequency_planner
     qubits = [
         QubitNode(
-            name=f"Q{i}",
+            name=f"Q{i+1}",
             qubit_type=qubit_type,
             attributes=[
                 Attribute("type", qubit_type),
@@ -265,8 +203,9 @@ def _build_program(
         for i in range(num_qubits)
     ]
     edges = _topology_edges(num_qubits, topology)
-    couplers = [CouplerNode(name=f"C{i}", qubit_a=f"Q{a}", qubit_b=f"Q{b}") for i, (a, b) in enumerate(edges)]
-    readouts = [ReadoutNode(name=f"R{i}", target_qubit=f"Q{i}") for i in range(num_qubits)]
+    # _topology_edges returns 0-indexed pairs; shift to 1-indexed to match qubit names
+    couplers = [CouplerNode(name=f"C{i+1}", qubit_a=f"Q{a+1}", qubit_b=f"Q{b+1}") for i, (a, b) in enumerate(edges)]
+    readouts = [ReadoutNode(name=f"RO_Q{i+1}", target_qubit=f"Q{i+1}") for i in range(num_qubits)]
     chip = ChipNode(name=f"QuantumChip_{num_qubits}Q", qubits=qubits, couplers=couplers, readouts=readouts)
     return Program(chips=[chip])
 
@@ -292,14 +231,14 @@ def _build_qclang_source(
     ]
     for i in range(num_qubits):
         freq_attr = f"frequency={round(target_freq + (-0.1 if i % 2 == 0 else 0.1) + (i * 0.013 % 0.06), 4)}"
-        lines.append(f"  qubit Q{i} type={qubit_type} {freq_attr}")
+        lines.append(f"  qubit Q{i+1} type={qubit_type} {freq_attr}")
     lines.append("")
     edges = _topology_edges(num_qubits, topology)
     for i, (a, b) in enumerate(edges):
-        lines.append(f"  coupler C{i} connect(Q{a},Q{b})")
+        lines.append(f"  coupler C{i+1} connect(Q{a+1},Q{b+1})")
     lines.append("")
     for i in range(num_qubits):
-        lines.append(f"  readout R{i} connect(Q{i})")
+        lines.append(f"  readout RO_Q{i+1} connect(Q{i+1})")
     lines.append("")
     lines.append("end")
     return "\n".join(lines)
@@ -391,13 +330,7 @@ async def generate_chip(
     scale = params["scale"]
 
     # Step 3: Build substrate config for physics engine
-    mat = get_material(sub)
-    physics_substrate = {
-        "epsilon_r": mat.get("epsilon_r", 11.45),
-        "cpw_width_um": mat.get("cpw_width_um", 10.0),
-        "cpw_gap_um": mat.get("cpw_gap_um", 6.0),
-        "substrate_height_um": mat.get("substrate_thickness_um", 430.0),
-    }
+    physics_substrate = get_physics_substrate(sub)
 
     # Step 4: Physics-grade frequency planning (Schneider CPW, IBM A/B coloring)
     try:

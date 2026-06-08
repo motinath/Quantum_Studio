@@ -18,70 +18,8 @@ import networkx as nx
 
 from app.qclang.ast_nodes import ChipNode, Program
 
-
-# ── Material parameters database ─────────────────────────────────────────────
-# Each entry describes the dielectric and metal properties used in
-# frequency planning and geometry generation.
-
-MATERIALS: dict[str, dict[str, Any]] = {
-    "silicon": {
-        "label": "Silicon (Si)",
-        "epsilon_r": 11.9,
-        "loss_tangent": 1e-6,
-        "substrate_thickness_um": 500,
-        "description": "Standard substrate for superconducting qubits",
-    },
-    "sapphire": {
-        "label": "Sapphire (Al₂O₃)",
-        "epsilon_r": 9.3,
-        "loss_tangent": 3e-8,
-        "substrate_thickness_um": 430,
-        "description": "Ultra-low-loss substrate, preferred for high-coherence devices",
-    },
-    "silicon_nitride": {
-        "label": "Silicon Nitride (SiN)",
-        "epsilon_r": 7.5,
-        "loss_tangent": 5e-5,
-        "substrate_thickness_um": 300,
-        "description": "Used for suspended resonators and kinetic inductance devices",
-    },
-    "aluminum": {
-        "label": "Aluminum (Al)",
-        "metal_type": "superconductor",
-        "Tc_K": 1.2,
-        "london_penetration_depth_nm": 16,
-        "sheet_resistance_mOhm": 0.4,
-        "description": "Standard superconducting metal for qubits and resonators",
-    },
-    "niobium": {
-        "label": "Niobium (Nb)",
-        "metal_type": "superconductor",
-        "Tc_K": 9.2,
-        "london_penetration_depth_nm": 39,
-        "sheet_resistance_mOhm": 0.1,
-        "description": "High-Tc superconductor used in resonators and transmission lines",
-    },
-    "tantalum": {
-        "label": "Tantalum (Ta)",
-        "metal_type": "superconductor",
-        "Tc_K": 4.5,
-        "london_penetration_depth_nm": 96,
-        "sheet_resistance_mOhm": 0.2,
-        "description": "Alpha-phase Ta shows exceptional T1 times (>300 µs)",
-    },
-    "nbtin": {
-        "label": "Niobium Titanium Nitride (NbTiN)",
-        "metal_type": "superconductor",
-        "Tc_K": 15.0,
-        "london_penetration_depth_nm": 200,
-        "sheet_resistance_mOhm": 10.0,
-        "description": "High kinetic inductance; used for KID detectors and SNAIL arrays",
-    },
-}
-
-
-def get_material(name: str) -> dict[str, Any]:
-    return MATERIALS.get(name.lower(), MATERIALS["silicon"])
+# ── Single source of truth for material parameters ────────────────────────────
+from app.services.materials import MATERIALS, get_material
 
 
 # ── Frequency planning ────────────────────────────────────────────────────────
@@ -111,11 +49,19 @@ def compute_frequency_plan(
     substrate: str = "silicon",
     metal: str = "aluminum",
 ) -> dict[str, Any]:
-    material = get_material(substrate)
-    epsilon_r = material.get("epsilon_r", 11.9)
+    mat = get_material(substrate)
+    epsilon_r = mat.get("epsilon_r", 11.45)
 
-    # CPW effective dielectric constant (half-space approximation)
-    epsilon_eff = (epsilon_r + 1) / 2.0
+    # CPW effective dielectric constant (Schneider half-space approximation)
+    cpw_w = mat.get("cpw_width_um", 10.0)
+    cpw_g = mat.get("cpw_gap_um", 6.0)
+    cpw_h = mat.get("substrate_thickness_um", 430.0)
+    # Use the physics engine's accurate Schneider formula when available
+    try:
+        from app.services.physics.frequency_planner import cpw_effective_permittivity
+        epsilon_eff = cpw_effective_permittivity(epsilon_r, cpw_w, cpw_g, cpw_h)
+    except Exception:
+        epsilon_eff = (epsilon_r + 1) / 2.0
 
     qubit_freqs: dict[str, float] = {}
     qubit_groups: dict[str, int] = {}
@@ -161,7 +107,7 @@ def compute_frequency_plan(
 
     # Readout resonators
     for i, q in enumerate(chip.qubits):
-        res_name = f"R{i}"
+        res_name = f"RO_{q.name}"
         # Readout resonator detuned ~1.5 GHz above qubit
         detuning = 1.5 + (i * 0.02) % 0.15
         rf = qubit_freqs[q.name] + detuning
@@ -232,7 +178,19 @@ def compute_placement(chip: ChipNode, topology_hint: str = "auto") -> dict[str, 
         {"name": name, "x": round(float(xy[0]), 4), "y": round(float(xy[1]), 4)}
         for name, xy in pos.items()
     ]
-    return {"solver": solver, "qubits": qubits}
+    # Build placement edges from the chip's coupler list so the frontend
+    # canvas can draw coupling meanders without falling back to proximity.
+    edges = [
+        {
+            "qubit_a": c.qubit_a,
+            "pin_a": "a",
+            "qubit_b": c.qubit_b,
+            "pin_b": "b",
+            "label": c.name,
+        }
+        for c in chip.couplers
+    ]
+    return {"solver": solver, "qubits": qubits, "edges": edges}
 
 
 # ── DRC ───────────────────────────────────────────────────────────────────────

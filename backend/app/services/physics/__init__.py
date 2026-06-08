@@ -31,18 +31,13 @@ def full_physics_analysis(payload: dict) -> dict[str, Any]:
     from app.services.physics.frequency_planner import FrequencyPlanner
     from app.services.physics.topology_router import place_qubits, placement_to_dict
     from app.services.physics.drc import run_drc
+    from app.services.materials import get_physics_substrate
 
     n = int(payload.get("num_qubits", 4))
     topology = str(payload.get("topology", "grid"))
     substrate_name = payload.get("material", {}).get("substrate", "silicon")
 
-    # Map substrate name to physics parameters
-    SUBSTRATE_PARAMS = {
-        "silicon":       {"epsilon_r": 11.45, "cpw_width_um": 10.0, "cpw_gap_um": 6.0, "substrate_height_um": 430.0},
-        "sapphire":      {"epsilon_r": 9.3,   "cpw_width_um": 10.0, "cpw_gap_um": 6.0, "substrate_height_um": 430.0},
-        "silicon_nitride":{"epsilon_r": 7.5,  "cpw_width_um": 10.0, "cpw_gap_um": 6.0, "substrate_height_um": 300.0},
-    }
-    physics_substrate = SUBSTRATE_PARAMS.get(substrate_name, SUBSTRATE_PARAMS["silicon"])
+    physics_substrate = get_physics_substrate(substrate_name)
 
     freq_plan = FrequencyPlanner(n=n, substrate=physics_substrate, topology=topology).plan()
     placement = place_qubits(n, topology=topology)

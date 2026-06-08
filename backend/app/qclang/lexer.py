@@ -17,32 +17,31 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Iterator
 
 
 # ── Token types ──────────────────────────────────────────────────────────────
 
 class TT(Enum):
-    CHIP     = auto()
-    END      = auto()
-    QUBIT    = auto()
-    COUPLER  = auto()
-    READOUT  = auto()
-    RESONATOR= auto()
-    VARIABLE = auto()
-    IDENT    = auto()
-    EQ       = auto()
-    LPAREN   = auto()
-    RPAREN   = auto()
-    COMMA    = auto()
-    STRING   = auto()
-    NUMBER   = auto()
-    BOOL     = auto()
-    CONNECT  = auto()
-    NEWLINE  = auto()
-    COMMENT  = auto()
-    EOF      = auto()
-    UNKNOWN  = auto()
+    CHIP      = auto()
+    END       = auto()
+    QUBIT     = auto()
+    COUPLER   = auto()
+    READOUT   = auto()
+    RESONATOR = auto()
+    VARIABLE  = auto()
+    IDENT     = auto()
+    EQ        = auto()
+    LPAREN    = auto()
+    RPAREN    = auto()
+    COMMA     = auto()
+    STRING    = auto()
+    NUMBER    = auto()
+    BOOL      = auto()
+    CONNECT   = auto()
+    NEWLINE   = auto()
+    COMMENT   = auto()
+    EOF       = auto()
+    UNKNOWN   = auto()
 
 
 @dataclass
@@ -77,6 +76,8 @@ _PATTERNS: list[tuple[TT, str]] = [
     (TT.RPAREN,    r"\)"),
     (TT.COMMA,     r","),
     (TT.NEWLINE,   r"\n"),
+    # Whitespace — consumed silently, not emitted
+    (TT.UNKNOWN,   r"[ \t\r]+"),
 ]
 
 _MASTER = re.compile(
@@ -84,7 +85,7 @@ _MASTER = re.compile(
 )
 
 
-# ── Lexer ─────────────────────────────────────────────────────────────────────
+# ── Error ─────────────────────────────────────────────────────────────────────
 
 class LexerError(Exception):
     def __init__(self, message: str, line: int, col: int):
@@ -93,43 +94,56 @@ class LexerError(Exception):
         self.col = col
 
 
+# ── Single-pass tokeniser ─────────────────────────────────────────────────────
+
 def tokenise(source: str) -> list[Token]:
-    """Tokenise QCLang source text.  Returns list of Tokens (comments excluded)."""
+    """
+    Tokenise QCLang source text in a single pass.
+
+    Returns list of Tokens (comments and whitespace excluded).
+    Raises LexerError on any unrecognised character with accurate line/col.
+    """
     tokens: list[Token] = []
     line = 1
     line_start = 0
+    pos = 0
 
     for mo in _MASTER.finditer(source):
+        # Any gap before this match is an unrecognised character
+        if mo.start() > pos:
+            bad = source[pos:mo.start()]
+            bad_char = bad.strip()
+            if bad_char:
+                # Accurate line/col using characters already seen
+                bad_line = source[:pos].count("\n") + 1
+                bad_line_start = source.rfind("\n", 0, pos) + 1
+                bad_col = pos - bad_line_start + 1
+                raise LexerError(f"Unexpected character {bad_char[0]!r}", bad_line, bad_col)
+
+        pos = mo.end()
         kind_name = mo.lastgroup[1:]  # strip leading underscore
         tt = TT[kind_name]
         value = mo.group()
         col = mo.start() - line_start + 1
 
         if tt == TT.COMMENT:
-            # skip comments
-            pass
+            pass  # skip
         elif tt == TT.NEWLINE:
             line += 1
             line_start = mo.end()
+        elif tt == TT.UNKNOWN:
+            pass  # whitespace — skip silently
         else:
             tokens.append(Token(tt, value, line, col))
 
-        # advance position tracking
-        if tt == TT.NEWLINE:
-            pass  # already updated above
-
-    # Handle characters not matched by any pattern
-    pos = 0
-    for mo in _MASTER.finditer(source):
-        if mo.start() > pos:
-            # gap = unrecognised character
-            bad_char = source[pos:mo.start()].strip()
-            if bad_char:
-                # count line
-                bad_line = source[:pos].count("\n") + 1
-                bad_col = pos - source.rfind("\n", 0, pos)
-                raise LexerError(f"Unexpected character {bad_char!r}", bad_line, bad_col)
-        pos = mo.end()
+    # Any trailing characters after last match
+    if pos < len(source):
+        bad = source[pos:].strip()
+        if bad:
+            bad_line = source[:pos].count("\n") + 1
+            bad_line_start = source.rfind("\n", 0, pos) + 1
+            bad_col = pos - bad_line_start + 1
+            raise LexerError(f"Unexpected character {bad[0]!r}", bad_line, bad_col)
 
     tokens.append(Token(TT.EOF, "", line, 0))
     return tokens

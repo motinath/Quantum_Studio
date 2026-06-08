@@ -461,11 +461,11 @@ function SiteNav({
           <a href="#features" className="transition-colors hover:text-foreground">
             Features
           </a>
-          <a href="#blog" className="transition-colors hover:text-foreground">
+          <a href="/blog" className="transition-colors hover:text-foreground">
             Blog
           </a>
           <Link to="/our-team" className="transition-colors hover:text-foreground">
-            Our Team
+            Team
           </Link>
           <a href="#contact" className="transition-colors hover:text-foreground">
             Contact
