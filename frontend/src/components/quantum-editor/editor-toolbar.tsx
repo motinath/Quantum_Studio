@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowLeft,
   Undo2,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { generateMetalCode } from "@/lib/api/backend";
 import type { EditorAction, EditorState } from "./editor-types";
 import { exportToGDS, exportToJSON, exportToPython, runDRC } from "./editor-types";
 
@@ -45,6 +47,7 @@ function download(filename: string, content: string, mime = "text/plain") {
 
 export function EditorToolbar({ state, dispatch, circuitName, conversationId }: Props) {
   const navigate = useNavigate();
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const qubitCount = state.components.filter(
     (c) => c.type === "TransmonPocket" || c.type === "TransmonCross",
   ).length;
@@ -67,6 +70,26 @@ export function EditorToolbar({ state, dispatch, circuitName, conversationId }: 
     toast.success("Layout rebuilt");
   };
 
+  const generateCode = async () => {
+    setIsGeneratingCode(true);
+    try {
+      const result = await generateMetalCode({
+        components: state.components,
+        connections: state.connections,
+        variables: state.variables as unknown as Record<string, unknown>,
+      });
+      download(`${circuitName || "circuit"}_metal.py`, result.code, "text/x-python");
+      if (result.warnings.length > 0) {
+        toast.warning(`Generated with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}`);
+      } else {
+        toast.success("Qiskit Metal code generated");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate code");
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
   const back = () => {
     navigate({ to: "/designer" });
   };
@@ -140,6 +163,15 @@ export function EditorToolbar({ state, dispatch, circuitName, conversationId }: 
             className="h-8 gap-1.5 rounded-lg text-xs"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Rebuild
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={generateCode}
+            disabled={isGeneratingCode || state.components.length === 0}
+            className="h-8 gap-1.5 rounded-lg text-xs"
+          >
+            <FileCode2 className="h-3.5 w-3.5" /> {isGeneratingCode ? "Generating" : "Generate Code"}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

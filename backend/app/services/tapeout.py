@@ -102,11 +102,12 @@ def _generate_gds_ascii(
     ]
 
     for q in qubits:
-        x = int(q["x"] * 1000)
-        y = int(q["y"] * 1000)
+        # Support both x/y (frontend-normalised) and x_mm/y_mm (raw placement)
+        x = int(q.get("x", q.get("x_mm", 0)) * 1000)
+        y = int(q.get("y", q.get("y_mm", 0)) * 1000)
         half = 200  # µm half-size → nm units (0.001 µm/unit)
         lines += [
-            f"# Qubit {q['name']} @ ({q['x']:.3f}, {q['y']:.3f}) mm",
+            f"# Qubit {q.get('name','?')} @ ({q.get('x', q.get('x_mm', 0)):.3f}, {q.get('y', q.get('y_mm', 0)):.3f}) mm",
             "BOUNDARY",
             f"LAYER {LAYER_MAP['base_metal']}",
             "DATATYPE 0",

@@ -41,7 +41,7 @@ export interface DRCReport {
 export interface FrequencyPlan {
   epsilon_eff: number;
   qubit_frequencies_GHz: Record<string, number>;
-  qubit_groups: Record<string, number>;
+  qubit_groups: Record<string, number | string>;
   EJ_GHz: Record<string, number>;
   EC_GHz: Record<string, number>;
   resonator_frequencies_GHz: Record<string, number>;
@@ -56,11 +56,35 @@ export interface PlacementQubit {
   name: string;
   x: number;
   y: number;
+  orientation_deg?: number;
+}
+
+export interface PlacementEdge {
+  qubit_a: string;
+  pin_a?: string;
+  qubit_b: string;
+  pin_b?: string;
+  label?: string;
 }
 
 export interface Placement {
   solver: string;
   qubits: PlacementQubit[];
+  edges?: PlacementEdge[];
+  topology?: string;
+  cols?: number;
+  rows?: number;
+  pitch_mm?: number;
+}
+
+export interface MLPrediction {
+  qubits: number;
+  topology: string;
+  class_index: number | null;
+  confidence: number | null;
+  method: string;
+  ml_skipped?: boolean;
+  reason?: string;
 }
 
 export interface GenerateResponse {
@@ -77,6 +101,7 @@ export interface GenerateResponse {
   code?: string;
   qclang_source?: string;
   material?: { substrate: string; metal: string };
+  ml_prediction?: MLPrediction;
   error_hint?: string;
 }
 
@@ -186,6 +211,26 @@ export async function compileQCLang(
   return api("/api/qclang/compile", {
     method: "POST",
     body: JSON.stringify({ source, ...options }),
+  });
+}
+
+export interface MetalCodeRequest {
+  components: Array<Record<string, unknown>>;
+  connections: Array<Record<string, unknown>>;
+  variables: Record<string, unknown>;
+}
+
+export interface MetalCodeResponse {
+  success: boolean;
+  code: string;
+  warnings: string[];
+  component_count: number;
+}
+
+export async function generateMetalCode(payload: MetalCodeRequest): Promise<MetalCodeResponse> {
+  return api<MetalCodeResponse>("/api/generate/metal-code", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 
@@ -428,11 +473,12 @@ function _buildClientResult(prompt: string, substrate: string, metal: string): G
   const cols = Math.ceil(Math.sqrt(numQubits));
 
   const qubits: PlacementQubit[] = Array.from({ length: numQubits }, (_, i) => {
-    if (topology === "chain") return { name: `Q${i}`, x: i * 2.0, y: 0 };
+    const name = `Q${i + 1}`;
+    if (topology === "chain") return { name, x: i * 2.0, y: 0 };
     if (topology === "ring") {
       const a = (2 * Math.PI * i) / numQubits;
       return {
-        name: `Q${i}`,
+        name,
         x: parseFloat((Math.cos(a) * 3).toFixed(3)),
         y: parseFloat((Math.sin(a) * 3).toFixed(3)),
       };
@@ -440,11 +486,12 @@ function _buildClientResult(prompt: string, substrate: string, metal: string): G
     const r = Math.floor(i / cols),
       c = i % cols;
     return {
-      name: `Q${i}`,
+      name,
       x: parseFloat((c * 2 - (cols - 1)).toFixed(3)),
       y: parseFloat((-r * 2 + (Math.ceil(numQubits / cols) - 1)).toFixed(3)),
     };
   });
+  const edges = _buildClientPlacementEdges(numQubits, topology);
 
   const qubitFreqs: Record<string, number> = {};
   const EJ: Record<string, number> = {};
@@ -453,14 +500,16 @@ function _buildClientResult(prompt: string, substrate: string, metal: string): G
   const resLengths: Record<string, number> = {};
 
   for (let i = 0; i < numQubits; i++) {
+    const qName = `Q${i + 1}`;
+    const roName = `RO_${qName}`;
     const group = i % 2 === 0;
-    qubitFreqs[`Q${i}`] = parseFloat(
+    qubitFreqs[qName] = parseFloat(
       (freq + (group ? -0.1 : 0.1) + ((i * 0.013) % 0.06)).toFixed(4),
     );
-    EJ[`Q${i}`] = parseFloat((12.8 + ((i * 0.1) % 0.5)).toFixed(3));
-    EC[`Q${i}`] = parseFloat((0.285 + ((i * 0.002) % 0.01)).toFixed(5));
-    resFreqs[`R${i}`] = parseFloat((qubitFreqs[`Q${i}`] + 1.5 + ((i * 0.02) % 0.1)).toFixed(4));
-    resLengths[`R${i}`] = parseFloat((7.5 - ((i * 0.05) % 0.3)).toFixed(4));
+    EJ[qName] = parseFloat((12.8 + ((i * 0.1) % 0.5)).toFixed(3));
+    EC[qName] = parseFloat((0.285 + ((i * 0.002) % 0.01)).toFixed(5));
+    resFreqs[roName] = parseFloat((qubitFreqs[qName] + 1.5 + ((i * 0.02) % 0.1)).toFixed(4));
+    resLengths[roName] = parseFloat((7.5 - ((i * 0.05) % 0.3)).toFixed(4));
   }
 
   const subLabels: Record<string, string> = {
@@ -495,10 +544,57 @@ function _buildClientResult(prompt: string, substrate: string, metal: string): G
       substrate,
       metal,
     },
-    placement: { solver: "client", qubits },
+    placement: {
+      solver: "client",
+      topology,
+      cols,
+      rows: Math.ceil(numQubits / cols),
+      pitch_mm: 2,
+      qubits,
+      edges,
+    },
     material: { substrate, metal },
     code: `# Silicofeller — ${numQubits}Q ${topology} on ${substrate}/${metal}\nimport qiskit_metal as metal\nfrom qiskit_metal import designs\nfrom qiskit_metal.qlibrary.qubits.transmon_pocket import TransmonPocket\n\ndesign = designs.DesignPlanar()\ndesign.overwrite_enabled = True\n${qubits.map((q) => `${q.name.toLowerCase()} = TransmonPocket(design, '${q.name}', options=dict(pos_x='${q.x}mm', pos_y='${q.y}mm'))`).join("\n")}\ndesign.rebuild()`,
   };
+}
+
+function _buildClientPlacementEdges(numQubits: number, topology: string): PlacementEdge[] {
+  const edges: PlacementEdge[] = [];
+  const addEdge = (a: number, b: number, label: string) => {
+    edges.push({
+      qubit_a: `Q${a + 1}`,
+      pin_a: "a",
+      qubit_b: `Q${b + 1}`,
+      pin_b: "b",
+      label,
+    });
+  };
+
+  if (topology === "chain") {
+    for (let i = 0; i < numQubits - 1; i++) addEdge(i, i + 1, `bus_chain_${i + 1}`);
+    return edges;
+  }
+
+  if (topology === "ring") {
+    for (let i = 0; i < numQubits; i++) addEdge(i, (i + 1) % numQubits, `bus_ring_${i + 1}`);
+    return edges;
+  }
+
+  if (topology === "heavy-hex") {
+    for (let i = 0; i < numQubits - 1; i++) addEdge(i, i + 1, `bus_hex_chain_${i + 1}`);
+    for (let i = 0; i + 3 < numQubits; i += 3) addEdge(i, i + 3, `bus_hex_link_${i + 1}`);
+    return edges;
+  }
+
+  const cols = Math.max(1, Math.ceil(Math.sqrt(numQubits)));
+  const rows = Math.ceil(numQubits / cols);
+  for (let i = 0; i < numQubits; i++) {
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    if (c + 1 < cols && i + 1 < numQubits) addEdge(i, i + 1, `bus_h_${i + 1}_${i + 2}`);
+    if (r + 1 < rows && i + cols < numQubits) addEdge(i, i + cols, `bus_v_${i + 1}_${i + cols + 1}`);
+  }
+  return edges;
 }
 
 function _clientVerify(payload: GenerateResponse): VerificationReport {

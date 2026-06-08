@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { loginUser, registerUser } from "@/lib/api/backend";
 
 export type UserRole = "admin" | "org_manager" | "engineer";
 
@@ -52,9 +53,9 @@ export function canAccess(role: UserRole, resource: string): boolean {
 interface AuthContextType {
   user: User | null;
   hydrated: boolean;
-  signIn: (email: string, password?: string) => { ok: boolean; error?: string };
+  signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signInAs: (role: UserRole) => void;
-  signUp: (name: string, email: string, org: string, role?: UserRole) => Promise<void>;
+  signUp: (name: string, email: string, password: string, org: string, role?: UserRole) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -62,109 +63,155 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = "silicofeller.auth.user";
 
-const DEFAULT_USER: User = {
-  id: "u_1",
-  name: "Harshith Gude",
-  email: "harshith@silicofeller.com",
-  role: "org_manager",
-  organization: "Gourmet Bistro Chain",
-  initials: "HG",
-};
+function _makeInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "U";
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
+  // Rehydrate from localStorage on mount — but validate the stored JWT is still present
   useEffect(() => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
+      const token = localStorage.getItem("qs_token");
+      if (stored && token) {
+        // Both user profile and JWT present — restore session
         setUser(JSON.parse(stored));
       } else {
-        // Default session for seamless UX
-        setUser(DEFAULT_USER);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_USER));
+        // No valid session — clear stale profile if JWT is gone
+        if (stored && !token) {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
       }
-    } catch (e) {
-      console.error("Failed to read auth from localStorage", e);
+    } catch {
+      // Corrupted storage — clear everything
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      localStorage.removeItem("qs_token");
     } finally {
       setHydrated(true);
     }
   }, []);
 
-  const signIn = (email: string, password?: string) => {
+  // ── signIn: calls the real backend /api/auth/token ──────────────────────
+  const signIn = async (
+    email: string,
+    password: string,
+  ): Promise<{ ok: boolean; error?: string }> => {
     if (!email || !email.includes("@")) {
       return { ok: false, error: "Invalid email" };
     }
-    const demo = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === email.toLowerCase());
-    const role = demo?.role ?? "engineer";
-    const org = demo?.organization ?? "Silicofeller Labs";
-    const name =
-      demo?.name ?? email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
-    const initials = name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    if (!password) {
+      return { ok: false, error: "Password is required" };
+    }
 
-    const newUser: User = {
-      id: `u_${Date.now()}`,
-      name,
-      email,
-      role,
-      organization: org,
-      initials,
-    };
-    setUser(newUser);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
-    return { ok: true };
+    try {
+      const data = await loginUser(email, password);
+      // loginUser stores qs_token in localStorage automatically
+      const serverUser = (data as { user?: Record<string, string> }).user;
+      if (serverUser) {
+        const newUser: User = {
+          id: serverUser.id ?? `u_${Date.now()}`,
+          name: serverUser.name ?? email.split("@")[0],
+          email: serverUser.email ?? email,
+          role: (serverUser.role as UserRole) ?? "engineer",
+          organization: serverUser.organization ?? "Independent",
+          initials: serverUser.initials ?? _makeInitials(serverUser.name ?? email),
+        };
+        setUser(newUser);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
+        return { ok: true };
+      }
+      return { ok: false, error: "Invalid server response" };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Login failed";
+      // Surface friendly messages for common HTTP errors
+      if (msg.includes("401")) return { ok: false, error: "Incorrect email or password" };
+      if (msg.includes("422")) return { ok: false, error: "Invalid credentials format" };
+      // Backend offline — fall back to demo account matching
+      return _signInOffline(email);
+    }
   };
 
-  const signInAs = (role: UserRole) => {
-    const demo = DEMO_ACCOUNTS.find((a) => a.role === role) || DEMO_ACCOUNTS[0];
-    const initials = demo.name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-
+  // Offline fallback: match demo accounts by email (no password check — dev only)
+  const _signInOffline = (email: string): { ok: boolean; error?: string } => {
+    const demo = DEMO_ACCOUNTS.find(
+      (a) => a.email.toLowerCase() === email.toLowerCase(),
+    );
+    if (!demo) {
+      return { ok: false, error: "Backend offline and no matching demo account" };
+    }
     const newUser: User = {
       id: `u_${demo.role}`,
       name: demo.name,
       email: demo.email,
       role: demo.role,
       organization: demo.organization,
-      initials,
+      initials: _makeInitials(demo.name),
+    };
+    setUser(newUser);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
+    return { ok: true };
+  };
+
+  // Quick demo login (bypasses real auth — development convenience only)
+  const signInAs = (role: UserRole) => {
+    const demo = DEMO_ACCOUNTS.find((a) => a.role === role) ?? DEMO_ACCOUNTS[0];
+    const newUser: User = {
+      id: `u_${demo.role}`,
+      name: demo.name,
+      email: demo.email,
+      role: demo.role,
+      organization: demo.organization,
+      initials: _makeInitials(demo.name),
     };
     setUser(newUser);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
   };
 
-  const signUp = async (name: string, email: string, org: string, role: UserRole = "engineer") => {
-    const initials = name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-
-    const newUser: User = {
-      id: `u_${Date.now()}`,
-      name,
-      email,
-      role,
-      organization: org || "Independent",
-      initials: initials || "U",
-    };
-    setUser(newUser);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
+  // ── signUp: calls the real backend /api/auth/register ───────────────────
+  const signUp = async (
+    name: string,
+    email: string,
+    password: string,
+    org: string,
+    role: UserRole = "engineer",
+  ): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const data = await registerUser(name, email, password, org);
+      // registerUser stores qs_token in localStorage automatically
+      const serverUser = (data as { user?: Record<string, string> }).user;
+      if (serverUser) {
+        const newUser: User = {
+          id: serverUser.id ?? `u_${Date.now()}`,
+          name: serverUser.name ?? name,
+          email: serverUser.email ?? email,
+          role: (serverUser.role as UserRole) ?? role,
+          organization: serverUser.organization ?? (org || "Independent"),
+          initials: serverUser.initials ?? _makeInitials(name),
+        };
+        setUser(newUser);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
+        return { ok: true };
+      }
+      return { ok: false, error: "Invalid server response" };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed";
+      if (msg.includes("400")) return { ok: false, error: "Email already registered" };
+      return { ok: false, error: msg };
+    }
   };
 
   const signOut = async () => {
     setUser(null);
     localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem("qs_token");
   };
 
   return (

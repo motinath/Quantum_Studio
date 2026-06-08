@@ -221,27 +221,35 @@ def has_explicit_qubit_count(prompt: str) -> Optional[int]:
 
 
 def _detect_topology_regex(prompt: str, n: int) -> str:
-    """Rule-based topology (pre-ML behavior) for 8+ qubits or when ML is out of range."""
+    """Rule-based topology detection for all qubit counts."""
     p = prompt.lower()
-    if any(w in p for w in ("fabricat", "sem", "physical")):
-        return "grid"
+    # Explicit topology keywords — checked first, highest priority
+    if re.search(r"heavy.?hex", p):
+        return "heavy_hex"
     if any(w in p for w in ("line", "chain", "linear", "bell", "entangle")):
         return "line"
-    if any(w in p for w in ("grid", "square", "lattice", "2x2", "2×2")):
-        return "grid"
+    if any(w in p for w in ("ring", "circular", "loop")):
+        return "ring"
     if any(w in p for w in ("star", "hub")):
         return "star"
-    if any(w in p for w in ("ring", "circular")):
-        return "ring"
-    if n <= 4:
+    if any(w in p for w in ("grid", "square", "lattice", "2x2", "2×2", "surface")):
         return "grid"
-    if n <= 9:
-        return "grid"
-    return "grid"
+    # Size-based defaults for common IBM architectures
+    if n == 27:
+        return "heavy_hex"   # Falcon / Hummingbird
+    if n == 53:
+        return "heavy_hex"   # Eagle / Sycamore-class
+    if n == 127:
+        return "heavy_hex"   # Eagle r3
+    if n in (16, 65):
+        return "heavy_hex"
+    return "grid"            # sensible default for everything else
 
 
 def _apply_topology_keywords(prompt: str, default: str) -> str:
     p = prompt.lower()
+    if re.search(r"heavy.?hex", p):
+        return "heavy_hex"
     if any(w in p for w in ("star", "hub")):
         return "star"
     if any(w in p for w in ("line", "chain", "linear", "bell", "entangle")):
@@ -250,9 +258,9 @@ def _apply_topology_keywords(prompt: str, default: str) -> str:
         return "grid"
     if any(w in p for w in ("triangular",)):
         return "line"
-    if any(w in p for w in ("hexagonal", "hex", "heavy")):
-        return "grid"
-    if any(w in p for w in ("ring", "circular")):
+    if any(w in p for w in ("hexagonal", "hex")):
+        return "heavy_hex"
+    if any(w in p for w in ("ring", "circular", "loop")):
         return "ring"
     return default
 

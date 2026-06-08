@@ -1,7 +1,12 @@
 """
 Database engine, session factory, and base declarative model.
-Uses SQLAlchemy 2.0 async engine with asyncpg driver.
-Falls back gracefully when a real DB is not available (SQLite for dev).
+
+Uses SQLAlchemy 2.0 async engine.
+- Postgres (asyncpg)  — production default
+- SQLite (aiosqlite)  — zero-setup dev default
+
+The session dependency commits on success and rolls back on exceptions,
+and correctly avoids double-committing on read-only requests.
 """
 
 from __future__ import annotations
@@ -22,9 +27,13 @@ log = logging.getLogger(__name__)
 
 _db_url = settings.database_url
 
-# Allow easy SQLite fallback for local dev without Postgres
-if _db_url.startswith("sqlite"):
-    engine = create_async_engine(_db_url, echo=False, connect_args={"check_same_thread": False})
+if settings.is_sqlite:
+    # SQLite requires check_same_thread=False for async use
+    engine = create_async_engine(
+        _db_url,
+        echo=False,
+        connect_args={"check_same_thread": False},
+    )
 else:
     engine = create_async_engine(
         _db_url,
@@ -46,15 +55,13 @@ AsyncSessionLocal = async_sessionmaker(
 # Base model
 # ---------------------------------------------------------------------------
 
-
 class Base(DeclarativeBase):
     pass
 
 
 # ---------------------------------------------------------------------------
-# Dependency
+# Dependency — commit on success, rollback on error
 # ---------------------------------------------------------------------------
-
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
@@ -67,12 +74,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 # ---------------------------------------------------------------------------
-# Init tables
+# Init tables (dev/test — use Alembic migrations in production)
 # ---------------------------------------------------------------------------
 
-
 async def init_db() -> None:
-    """Create all tables if they do not exist (dev/test only; use Alembic in prod)."""
+    """Create all tables if they do not exist."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     log.info("Database tables ensured.")

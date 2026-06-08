@@ -70,6 +70,12 @@ class EMSimRequest(BaseModel):
     backend: str = "hfss"
 
 
+class MetalCodeRequest(BaseModel):
+    components: list[dict[str, Any]]
+    connections: list[dict[str, Any]]
+    variables: dict[str, Any] = Field(default_factory=dict)
+
+
 class HealthResponse(BaseModel):
     status: str
     version: str
@@ -128,6 +134,29 @@ async def generate(
     return result
 
 
+
+# Generate Qiskit Metal code from the drag/drop editor state
+
+@sub_router.post("/generate/metal-code")
+async def generate_metal_code(body: MetalCodeRequest) -> dict[str, Any]:
+    """Generate runnable Qiskit Metal Python from Quantum Editor JSON."""
+    from app.services.metal_codegen.adapter import editor_state_to_design
+    from app.services.metal_codegen.metal_codegen import MetalCodeGenerator
+
+    design = editor_state_to_design(
+        components=body.components,
+        connections=body.connections,
+        variables=body.variables,
+    )
+    result = MetalCodeGenerator(design).generate()
+
+    return {
+        "success": True,
+        "code": result.source_code,
+        "warnings": result.warnings or [],
+        "component_count": result.component_count,
+    }
+
 # ── Frequency plan ────────────────────────────────────────────────────────────
 
 @sub_router.post("/generate/frequency-plan")
@@ -138,21 +167,13 @@ async def frequency_plan(body: FrequencyPlanRequest) -> dict[str, Any]:
     collision warnings.
     """
     try:
-        from app.services.chip_generator import get_material
+        from app.services.materials import get_material, get_physics_substrate
         from app.services.physics.frequency_planner import FrequencyPlanner
 
         n = max(1, min(MAX_QUBITS, body.n))
         topology = body.topology
 
-        physics_substrate = None
-        if body.substrate:
-            mat = get_material(body.substrate)
-            physics_substrate = {
-                "epsilon_r": mat.get("epsilon_r", 11.45),
-                "cpw_width_um": mat.get("cpw_width_um", 10.0),
-                "cpw_gap_um": mat.get("cpw_gap_um", 6.0),
-                "substrate_height_um": mat.get("substrate_thickness_um", 430.0),
-            }
+        physics_substrate = get_physics_substrate(body.substrate) if body.substrate else None
 
         planner = FrequencyPlanner(n=n, substrate=physics_substrate, topology=topology)
         freq_plan = planner.plan()

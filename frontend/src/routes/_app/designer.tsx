@@ -846,6 +846,10 @@ function InteractiveCADCanvas({
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const qubits = result.placement?.qubits ?? [];
+  const placementEdges = result.placement?.edges ?? [];
+  const resonatorEntries = Object.entries(
+    result.frequency_plan?.resonator_frequencies_GHz ?? {},
+  );
 
   const coords = useMemo(() => {
     if (qubits.length === 0) return { minX: 0, maxX: 1, minY: 0, maxY: 1, rangeX: 1, rangeY: 1 };
@@ -989,52 +993,116 @@ function InteractiveCADCanvas({
       };
     };
 
-    // Meanders
-    if (layers.meanders) {
-      for (let i = 0; i < qubits.length; i++) {
-        for (let j = i + 1; j < qubits.length; j++) {
-          const q1 = qubits[i],
-            q2 = qubits[j];
-          const dist = Math.hypot(q1.x - q2.x, q1.y - q2.y);
-          if (dist < 2.5) {
-            const p1 = getScreen(q1.x, q1.y),
-              p2 = getScreen(q2.x, q2.y);
-            const isConn = selectedQubit
-              ? q1.name === selectedQubit.name || q2.name === selectedQubit.name
-              : true;
-            ctx.globalAlpha = selectedQubit && !isConn ? 0.12 : 1.0;
-            ctx.strokeStyle = selectedQubit && isConn ? "#7C3AED" : "rgba(100,116,139,0.65)";
-            ctx.lineWidth = selectedQubit && isConn ? 2.5 / zoomScale : 1.5 / zoomScale;
-            ctx.beginPath();
-            ctx.moveTo(p1.px, p1.py);
-            const midX = (p1.px + p2.px) / 2,
-              midY = (p1.py + p2.py) / 2;
-            const dx = p2.px - p1.px,
-              dy = p2.py - p1.py;
-            if (Math.abs(dx) > Math.abs(dy)) {
-              ctx.lineTo(midX - 10, p1.py);
-              ctx.lineTo(midX - 10, p1.py - 6);
-              ctx.lineTo(midX - 3, p1.py - 6);
-              ctx.lineTo(midX - 3, p1.py + 6);
-              ctx.lineTo(midX + 3, p1.py + 6);
-              ctx.lineTo(midX + 3, p1.py - 6);
-              ctx.lineTo(midX + 10, p1.py - 6);
-              ctx.lineTo(midX + 10, p2.py);
-            } else {
-              ctx.lineTo(p1.px, midY - 10);
-              ctx.lineTo(p1.px - 6, midY - 10);
-              ctx.lineTo(p1.px - 6, midY - 3);
-              ctx.lineTo(p1.px + 6, midY - 3);
-              ctx.lineTo(p1.px + 6, midY + 3);
-              ctx.lineTo(p1.px - 6, midY + 3);
-              ctx.lineTo(p1.px - 6, midY + 10);
-              ctx.lineTo(p2.px, midY + 10);
-            }
-            ctx.lineTo(p2.px, p2.py);
-            ctx.stroke();
-          }
-        }
+    const qubitByName = new Map(qubits.map((q) => [q.name, q]));
+    const isConnectedToSelected = (name: string) =>
+      !selectedQubit ||
+      name === selectedQubit.name ||
+      placementEdges.some(
+        (edge) =>
+          (edge.qubit_a === selectedQubit.name && edge.qubit_b === name) ||
+          (edge.qubit_b === selectedQubit.name && edge.qubit_a === name),
+      );
+
+    const drawMeanderPath = (
+      p1: { px: number; py: number },
+      p2: { px: number; py: number },
+    ) => {
+      ctx.beginPath();
+      ctx.moveTo(p1.px, p1.py);
+      const midX = (p1.px + p2.px) / 2;
+      const midY = (p1.py + p2.py) / 2;
+      const dx = p2.px - p1.px;
+      const dy = p2.py - p1.py;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        ctx.lineTo(midX - 10, p1.py);
+        ctx.lineTo(midX - 10, p1.py - 6);
+        ctx.lineTo(midX - 3, p1.py - 6);
+        ctx.lineTo(midX - 3, p1.py + 6);
+        ctx.lineTo(midX + 3, p1.py + 6);
+        ctx.lineTo(midX + 3, p1.py - 6);
+        ctx.lineTo(midX + 10, p1.py - 6);
+        ctx.lineTo(midX + 10, p2.py);
+      } else {
+        ctx.lineTo(p1.px, midY - 10);
+        ctx.lineTo(p1.px - 6, midY - 10);
+        ctx.lineTo(p1.px - 6, midY - 3);
+        ctx.lineTo(p1.px + 6, midY - 3);
+        ctx.lineTo(p1.px + 6, midY + 3);
+        ctx.lineTo(p1.px - 6, midY + 3);
+        ctx.lineTo(p1.px - 6, midY + 10);
+        ctx.lineTo(p2.px, midY + 10);
       }
+      ctx.lineTo(p2.px, p2.py);
+      ctx.stroke();
+    };
+
+    // Coupling meanders from backend topology edges
+    if (layers.meanders) {
+      placementEdges.forEach((edge) => {
+        const q1 = qubitByName.get(edge.qubit_a);
+        const q2 = qubitByName.get(edge.qubit_b);
+        if (!q1 || !q2) return;
+        const p1 = getScreen(q1.x, q1.y);
+        const p2 = getScreen(q2.x, q2.y);
+        const isConn = selectedQubit
+          ? q1.name === selectedQubit.name || q2.name === selectedQubit.name
+          : true;
+        ctx.globalAlpha = selectedQubit && !isConn ? 0.12 : 1.0;
+        ctx.strokeStyle = selectedQubit && isConn ? "#7C3AED" : "rgba(100,116,139,0.65)";
+        ctx.lineWidth = selectedQubit && isConn ? 2.5 / zoomScale : 1.5 / zoomScale;
+        drawMeanderPath(p1, p2);
+      });
+      ctx.globalAlpha = 1.0;
+    }
+
+    // Readout resonators from the backend frequency plan
+    if (layers.meanders && resonatorEntries.length > 0) {
+      const center = { px: width / 2, py: height / 2 };
+      resonatorEntries.forEach(([name], idx) => {
+        const targetName = name.replace(/^RO_/, "");
+        const q = qubitByName.get(targetName);
+        if (!q) return;
+        const p = getScreen(q.x, q.y);
+        const angleFallback = (idx / Math.max(1, resonatorEntries.length)) * Math.PI * 2;
+        const vx = p.px - center.px || Math.cos(angleFallback);
+        const vy = p.py - center.py || Math.sin(angleFallback);
+        const len = Math.hypot(vx, vy) || 1;
+        const ux = vx / len;
+        const uy = vy / len;
+        const rx = p.px + ux * 42;
+        const ry = p.py + uy * 42;
+        const isConn = isConnectedToSelected(q.name);
+
+        ctx.globalAlpha = selectedQubit && !isConn ? 0.12 : 1.0;
+        ctx.strokeStyle = selectedQubit && q.name === selectedQubit.name ? "#7C3AED" : "#64748B";
+        ctx.lineWidth = 1.4 / zoomScale;
+        ctx.beginPath();
+        ctx.moveTo(p.px + ux * 13, p.py + uy * 13);
+        ctx.lineTo(rx - ux * 13, ry - uy * 13);
+        ctx.stroke();
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.strokeStyle = selectedQubit && q.name === selectedQubit.name ? "#7C3AED" : "#64748B";
+        ctx.lineWidth = 1.2 / zoomScale;
+        ctx.beginPath();
+        ctx.roundRect(rx - 13, ry - 10, 26, 20, 3);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(rx - 8, ry + 1);
+        ctx.lineTo(rx - 3, ry + 1);
+        ctx.lineTo(rx - 3, ry - 5);
+        ctx.lineTo(rx + 3, ry - 5);
+        ctx.lineTo(rx + 3, ry + 5);
+        ctx.lineTo(rx + 8, ry + 5);
+        ctx.stroke();
+
+        if (layers.labels) {
+          ctx.fillStyle = "#475569";
+          ctx.font = "bold 8px monospace";
+          ctx.fillText(name, rx - 13, ry + 20);
+        }
+      });
       ctx.globalAlpha = 1.0;
     }
 
@@ -1044,10 +1112,7 @@ function InteractiveCADCanvas({
         const { px, py } = getScreen(q.x, q.y);
         const isHovered = hovered?.name === q.name;
         const isSelected = selectedQubit?.name === q.name;
-        const isConn = selectedQubit
-          ? q.name === selectedQubit.name ||
-            Math.hypot(q.x - selectedQubit.x, q.y - selectedQubit.y) < 2.5
-          : true;
+        const isConn = isConnectedToSelected(q.name);
         ctx.globalAlpha = selectedQubit && !isConn ? 0.12 : 1.0;
 
         if (isSelected) {
@@ -1173,18 +1238,21 @@ function InteractiveCADCanvas({
       freq: fp?.qubit_frequencies_GHz?.[name] ?? 5.0,
       EJ: fp?.EJ_GHz?.[name] ?? 13.0,
       EC: fp?.EC_GHz?.[name] ?? 0.28,
-      resonatorFreq: fp?.resonator_frequencies_GHz?.[`R${name.slice(1)}`] ?? 6.5,
+      resonatorFreq: fp?.resonator_frequencies_GHz?.[`RO_${name}`] ?? 6.5,
     };
   }, [hovered, result]);
 
   const coupledQubitsList = useMemo(() => {
     if (!selectedQubit) return [];
-    return qubits.filter(
-      (q) =>
-        q.name !== selectedQubit.name &&
-        Math.hypot(q.x - selectedQubit.x, q.y - selectedQubit.y) < 2.5,
+    const coupledNames = new Set(
+      placementEdges.flatMap((edge) => {
+        if (edge.qubit_a === selectedQubit.name) return [edge.qubit_b];
+        if (edge.qubit_b === selectedQubit.name) return [edge.qubit_a];
+        return [];
+      }),
     );
-  }, [selectedQubit, qubits]);
+    return qubits.filter((q) => coupledNames.has(q.name));
+  }, [selectedQubit, qubits, placementEdges]);
 
   return (
     <div className="relative w-full h-full flex justify-center items-center">
@@ -1246,7 +1314,7 @@ function InteractiveCADCanvas({
                         },
                         {
                           label: "Readout Resonator",
-                          value: `${(result.frequency_plan?.resonator_frequencies_GHz?.[`R${selectedQubit.name.slice(1)}`] ?? 6.5).toFixed(3)} GHz`,
+                          value: `${(result.frequency_plan?.resonator_frequencies_GHz?.[`RO_${selectedQubit.name}`] ?? 6.5).toFixed(3)} GHz`,
                           color: "bg-violet-600",
                           textColor: "text-violet-700",
                         },

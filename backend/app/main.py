@@ -66,7 +66,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list + ["*"],  # allow all in dev
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -126,9 +126,10 @@ class FreqPlanRequest(BaseModel):
 
 @legacy.post("/frequency-plan")
 async def frequency_plan(body: FreqPlanRequest):
-    from app.qclang.ast_nodes import QubitNode, ChipNode, Program
+    from app.qclang.ast_nodes import QubitNode, ChipNode
     from app.qclang.compiler import compute_frequency_plan
-    qubits = [QubitNode(name=f"Q{i}", qubit_type="transmon") for i in range(body.num_qubits)]
+    # Use 1-indexed names matching the rest of the pipeline
+    qubits = [QubitNode(name=f"Q{i+1}", qubit_type="transmon") for i in range(body.num_qubits)]
     chip = ChipNode(name="Temp", qubits=qubits)
     return compute_frequency_plan(chip, body.target_freq_ghz, body.substrate, body.metal)
 
@@ -149,10 +150,11 @@ async def netlist(body: dict):
 
 @legacy.post("/placement")
 async def placement(body: dict):
-    from app.qclang.ast_nodes import QubitNode, ChipNode, Program
+    from app.qclang.ast_nodes import QubitNode, ChipNode
     from app.qclang.compiler import compute_placement
     n = body.get("num_qubits", 5)
-    qubits = [QubitNode(name=f"Q{i}", qubit_type="transmon") for i in range(n)]
+    # Use 1-indexed names matching the rest of the pipeline
+    qubits = [QubitNode(name=f"Q{i+1}", qubit_type="transmon") for i in range(n)]
     chip = ChipNode(name="Temp", qubits=qubits)
     return compute_placement(chip)
 

@@ -55,11 +55,12 @@ function SignUpPage() {
     updates: true,
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [loading, setLoading] = useState(false);
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
     if (form.fullName.trim().length < 2) next.fullName = "Enter your full name";
@@ -70,9 +71,18 @@ function SignUpPage() {
     if (!form.terms) next.terms = "You must accept the terms";
     setErrors(next);
     if (Object.keys(next).length) return;
-    signUp(form.fullName, form.email, form.organization);
-    toast.success(`Welcome — you're the Organization Manager for ${form.organization}`);
-    navigate({ to: "/" });
+    setLoading(true);
+    try {
+      const res = await signUp(form.fullName, form.email, form.password, form.organization);
+      if (!res.ok) {
+        toast.error(res.error ?? "Registration failed");
+        return;
+      }
+      toast.success(`Welcome — account created for ${form.organization}`);
+      navigate({ to: "/" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -197,9 +207,13 @@ function SignUpPage() {
               </label>
             </div>
 
-            <Button type="submit" className="h-11 w-full rounded-full text-sm font-semibold">
-              Create account
-            </Button>
+            <Button
+                type="submit"
+                disabled={loading}
+                className="h-11 w-full rounded-full text-sm font-semibold"
+              >
+                {loading ? "Creating account…" : "Create account"}
+              </Button>
           </form>
 
           <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">

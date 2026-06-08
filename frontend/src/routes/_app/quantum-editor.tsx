@@ -54,18 +54,20 @@ function QuantumEditorPage() {
         variables: seed.variables,
       },
     });
+    // Seed prevResultRef with the original generate result so the first sync
+    // has access to placement.edges, frequency_plan, etc.
+    prevResultRef.current = conversation.result;
     loadedFor.current = conversation.id;
   }, [conversation]);
 
   // Two-way sync: push state changes back into design context (debounced via rev)
-  const prevResultRef = useRef(conversation?.result ?? null);
-  useEffect(() => {
-    prevResultRef.current = conversation?.result ?? prevResultRef.current;
-  }, [conversation?.result]);
+  const prevResultRef = useRef<import("@/lib/api/backend").GenerateResponse | null>(null);
 
   useEffect(() => {
     if (!conversation || state.rev === 0) return;
     const t = window.setTimeout(() => {
+      // Use the stored prev result (seeded by the load effect) so placement.edges
+      // and other backend-generated fields are preserved across editor edits.
       const next = toGenerateResponse(state, prevResultRef.current);
       updateConversationResult(conversation.id, next);
       prevResultRef.current = next;

@@ -38,22 +38,28 @@ function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
     if (!/^\S+@\S+\.\S+$/.test(email)) next.email = "Enter a valid email address";
     if (password.length < 4) next.password = "Enter your password";
     setErrors(next);
     if (Object.keys(next).length) return;
-    const res = signIn(email, password);
-    if (!res.ok) {
-      toast.error(res.error);
-      setErrors({ password: res.error });
-      return;
+    setLoading(true);
+    try {
+      const res = await signIn(email, password);
+      if (!res.ok) {
+        toast.error(res.error);
+        setErrors({ password: res.error });
+        return;
+      }
+      toast.success("Signed in — welcome back");
+      navigate({ to: "/" });
+    } finally {
+      setLoading(false);
     }
-    toast.success("Signed in — welcome back");
-    navigate({ to: "/" });
   };
 
   const quickLogin = (role: Role) => {
@@ -128,8 +134,12 @@ function SignInPage() {
                 </Link>
               </div>
 
-              <Button type="submit" className="h-11 w-full rounded-full text-sm font-semibold">
-                Sign in
+              <Button
+                type="submit"
+                disabled={loading}
+                className="h-11 w-full rounded-full text-sm font-semibold"
+              >
+                {loading ? "Signing in…" : "Sign in"}
               </Button>
             </form>
 
