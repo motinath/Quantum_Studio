@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.config import settings
 from app.database import get_db
+from app.middleware.rate_limit import limiter
 from app.models import User, UserRole
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -59,7 +60,8 @@ def _user_to_dict(user: User) -> dict:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -80,7 +82,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/token", response_model=TokenResponse)
-async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == form.username))
     user = result.scalar_one_or_none()
 
@@ -96,5 +99,6 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
 
 
 @router.get("/me")
-async def get_me(current_user: User = Depends(get_current_user)):
+@limiter.limit("60/minute")
+async def get_me(request: Request, current_user: User = Depends(get_current_user)):
     return _user_to_dict(current_user)

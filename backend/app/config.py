@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # Claude / Anthropic (optional — falls back to rule-based assistant if empty)
     anthropic_api_key: str = ""
 
+    # Sentry (optional — error tracking disabled if empty)
+    sentry_dsn: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

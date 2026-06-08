@@ -21,9 +21,15 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from app.config import settings
 from app.database import init_db
+from app.middleware.rate_limit import limiter
 from app.routers import auth, claude, generate, materials, projects, qclang, simulations, tapeout, verification
 from app.routers import design  # V2 design pipeline
 
@@ -50,6 +56,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
+# ── Sentry ────────────────────────────────────────────────────────────────────
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.app_env,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=0.2 if settings.is_production else 1.0,
+        profiles_sample_rate=0.1 if settings.is_production else 1.0,
+    )
+
+
+# ── App ───────────────────────────────────────────────────────────────────────
+
 app = FastAPI(
     title="SILICOFELLER Quantum Studio API",
     description=(
@@ -61,6 +84,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+app.state.limiter = limiter
 
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -96,7 +120,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     log.exception(f"Unhandled exception on {request.url}: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error", "error": str(exc)},
+        content={"detail": "Internal server error"},
+    )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please slow down."},
     )
 
 
