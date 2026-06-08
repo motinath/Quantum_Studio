@@ -8,7 +8,10 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import httpx
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -53,6 +56,25 @@ class UserOut(BaseModel):
     email: str
     role: str
     organization: str
+
+
+class GitHubTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = ""
+    scope: str = ""
+
+
+class GitHubUser(BaseModel):
+    id: int
+    login: str
+    name: str | None = None
+    email: str | None = None
+
+
+class GitHubEmail(BaseModel):
+    email: str
+    primary: bool
+    verified: bool
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,6 +130,31 @@ The Quantum Studio Team"""
         return False
 
 
+async def _resolve_github_email(profile: GitHubUser, gh_token: str) -> str:
+    """Return the verified primary GitHub email for the given user.
+    
+    First checks the profile's email field. If absent, fetches /user/emails
+    and returns the first entry with primary=True and verified=True.
+    Raises ValueError if no verified primary email can be found.
+    """
+    if profile.email:
+        return profile.email
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://api.github.com/user/emails",
+            headers={
+                "Authorization": f"token {gh_token}",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        resp.raise_for_status()
+        emails: list[dict] = resp.json()
+    for entry in emails:
+        if entry.get("primary") and entry.get("verified"):
+            return entry["email"]
+    raise ValueError("No verified primary email found for this GitHub account")
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/send-otp")
@@ -132,11 +179,11 @@ async def send_otp(body: OTPRequest, db: AsyncSession = Depends(get_db)):
     email_line = f" For email: {body.email} "
     expire_line = " This code will expire in 5 minutes. "
     
-    print("\n" + "┌" + "─" * box_width + "┐")
-    print("│" + title_line.center(box_width) + "│")
-    print("│" + email_line.center(box_width) + "│")
-    print("│" + expire_line.center(box_width) + "│")
-    print("└" + "─" * box_width + "┘\n")
+    print("\n" + "+" + "-" * box_width + "+")
+    print("|" + title_line.center(box_width) + "|")
+    print("|" + email_line.center(box_width) + "|")
+    print("|" + expire_line.center(box_width) + "|")
+    print("+" + "-" * box_width + "+\n")
 
     # Attempt to send email via SMTP (if configured)
     sent_real_email = send_verification_email(body.email, otp)
@@ -263,3 +310,119 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
 @router.get("/me")
 async def get_me(current_user: User = Depends(get_current_user)):
     return _user_to_dict(current_user)
+
+
+@router.get("/github/authorize")
+async def github_authorize():
+    if not settings.github_client_id:
+        raise HTTPException(
+            status_code=500,
+            detail="GitHub OAuth is not configured",
+        )
+    redirect_uri = "http://localhost:5000/api/auth/github/callback"
+    github_url = (
+        f"https://github.com/login/oauth/authorize"
+        f"?client_id={settings.github_client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&scope=user:email"
+    )
+    return RedirectResponse(url=github_url, status_code=302)
+
+
+@router.get("/github/callback")
+async def github_callback(code: str, db: AsyncSession = Depends(get_db)):
+    frontend_url = settings.frontend_url.rstrip("/")
+    try:
+        # 1. Exchange code for access token
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                "https://github.com/login/oauth/access_token",
+                json={
+                    "client_id": settings.github_client_id,
+                    "client_secret": settings.github_client_secret,
+                    "code": code,
+                },
+                headers={"Accept": "application/json"},
+            )
+            token_data = token_resp.json()
+
+        if "error" in token_data or "access_token" not in token_data:
+            return RedirectResponse(
+                url=f"{frontend_url}/auth/github/callback?error=github_token_exchange_failed",
+                status_code=302,
+            )
+
+        gh_token = token_data["access_token"]
+
+        # 2. Fetch GitHub user profile
+        async with httpx.AsyncClient() as client:
+            profile_resp = await client.get(
+                "https://api.github.com/user",
+                headers={
+                    "Authorization": f"token {gh_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+            )
+            profile_resp.raise_for_status()
+            profile_data = profile_resp.json()
+
+        profile = GitHubUser(**profile_data)
+
+        # 3. Resolve email
+        try:
+            email = await _resolve_github_email(profile, gh_token)
+        except ValueError:
+            return RedirectResponse(
+                url=f"{frontend_url}/auth/github/callback?error=no_verified_email",
+                status_code=302,
+            )
+
+        github_id = str(profile.id)
+
+        # 4. Find or create user
+        # First try by oauth_subject
+        result = await db.execute(select(User).where(User.oauth_subject == github_id))
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            # Fall back to email lookup
+            result = await db.execute(select(User).where(User.email == email))
+            user = result.scalar_one_or_none()
+
+        if user:
+            # Update OAuth linkage
+            user.oauth_provider = "github"
+            user.oauth_subject = github_id
+        else:
+            # Create new user
+            name = profile.name or profile.login
+            user = User(
+                name=name,
+                email=email,
+                hashed_password=hash_password(secrets.token_hex(32)),
+                role=UserRole.engineer,
+                organization="Independent",
+                oauth_provider="github",
+                oauth_subject=github_id,
+            )
+            db.add(user)
+
+        await db.flush()
+        await db.refresh(user)
+
+        # 5. Issue JWT and redirect
+        jwt_token = create_access_token(
+            {"sub": user.id},
+            timedelta(minutes=settings.access_token_expire_minutes),
+        )
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/github/callback?token={jwt_token}",
+            status_code=302,
+        )
+
+    except Exception as e:
+        print(f"GitHub OAuth error: {e}")
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/github/callback?error=github_api_error",
+            status_code=302,
+        )

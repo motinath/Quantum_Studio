@@ -46,7 +46,7 @@ interface FormState {
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { signUp, signInWithGoogle, isLoading } = useAuth();
+  const { signUp, signInWithGoogle, signInWithGitHub, isLoading } = useAuth();
   const [step, setStep] = useState<"details" | "otp">("details");
   const [otp, setOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -347,7 +347,10 @@ function SignUpPage() {
                 <SocialButton
                   provider="github"
                   label="Sign up with GitHub"
-                  onClick={() => toast("Coming soon")}
+                  onClick={() => {
+                    const url = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+                    window.location.href = `${url}/api/auth/github/authorize`;
+                  }}
                 />
               </div>
             </>

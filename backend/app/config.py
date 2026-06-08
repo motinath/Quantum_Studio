@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
 
+    # GitHub OAuth
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    frontend_url: str = "http://localhost:8080"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

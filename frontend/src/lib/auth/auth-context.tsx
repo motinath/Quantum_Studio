@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { loginUser, registerUser, getCurrentUser, loginWithGoogle } from "@/lib/api/backend";
+import { loginUser, registerUser, getCurrentUser, loginWithGoogle, initiateGithubLogin } from "@/lib/api/backend";
 import { toast } from "sonner";
 
 export type UserRole = "admin" | "org_manager" | "engineer";
@@ -43,6 +43,7 @@ interface AuthContextType {
     otp: string,
   ) => Promise<{ ok: boolean; error?: string }>;
   signInWithGoogle: (idToken: string) => Promise<{ ok: boolean; error?: string }>;
+  signInWithGitHub: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -240,6 +241,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [],
   );
 
+  const signInWithGitHub = useCallback(() => {
+    initiateGithubLogin();
+  }, []);
+
   // Idle timeout of 2 minutes
   useEffect(() => {
     if (!user) return;
@@ -277,7 +282,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut, signInWithGoogle, signInWithGitHub }}>
       {children}
     </AuthContext.Provider>
   );

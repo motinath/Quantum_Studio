@@ -484,6 +484,11 @@ export async function getCurrentUser(token: string): Promise<AuthResponse["user"
   return res.json();
 }
 
+export function initiateGithubLogin(): void {
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+  window.location.href = `${backendUrl}/api/auth/github/authorize`;
+}
+
 // ── Client-side fallback generator ───────────────────────────────────────────
 // Keeps the designer working even when backend is offline.
 
