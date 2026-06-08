@@ -167,7 +167,8 @@ function SignInPage() {
                 label="Continue with GitHub"
                 onClick={() => {
                   const url = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
-                  window.location.href = `${url}/api/auth/github/authorize`;
+                  const frontendOrigin = window.location.origin;
+                  window.location.href = `${url}/api/auth/github/authorize?frontend_url=${encodeURIComponent(frontendOrigin)}`;
                 }}
               />
             </div>

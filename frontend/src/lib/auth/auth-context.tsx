@@ -44,6 +44,7 @@ interface AuthContextType {
   ) => Promise<{ ok: boolean; error?: string }>;
   signInWithGoogle: (idToken: string) => Promise<{ ok: boolean; error?: string }>;
   signInWithGitHub: () => void;
+  completeGithubLogin: (token: string, user: User) => void;
   signOut: () => Promise<void>;
 }
 
@@ -245,6 +246,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initiateGithubLogin();
   }, []);
 
+  const completeGithubLogin = useCallback((token: string, loggedInUser: User) => {
+    setStorageItem(TOKEN_KEY, token);
+    setStorageItem(USER_KEY, JSON.stringify(loggedInUser));
+    setUser(loggedInUser);
+    console.log("[Auth] GitHub login completed, state updated");
+  }, []);
+
   // Idle timeout of 2 minutes
   useEffect(() => {
     if (!user) return;
@@ -282,7 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut, signInWithGoogle, signInWithGitHub }}>
+    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut, signInWithGoogle, signInWithGitHub, completeGithubLogin }}>
       {children}
     </AuthContext.Provider>
   );

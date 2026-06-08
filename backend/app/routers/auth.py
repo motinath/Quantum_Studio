@@ -10,7 +10,9 @@ from email.mime.multipart import MIMEMultipart
 
 import httpx
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import base64
+import urllib.parse
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -313,25 +315,55 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/github/authorize")
-async def github_authorize():
+async def github_authorize(request: Request, frontend_url: str | None = None):
     if not settings.github_client_id:
         raise HTTPException(
             status_code=500,
             detail="GitHub OAuth is not configured",
         )
-    redirect_uri = "http://localhost:5000/api/auth/github/callback"
+    
+    # Pass the frontend URL in the state query parameter
+    state_data = frontend_url or settings.frontend_url
+    # Base64 encode state to keep it clean in URLs
+    state = base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8")
+    
+    # Dynamically determine the backend's callback URI based on the request's base URL
+    base_url = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base_url}/api/auth/github/callback"
+    
     github_url = (
         f"https://github.com/login/oauth/authorize"
         f"?client_id={settings.github_client_id}"
         f"&redirect_uri={redirect_uri}"
         f"&scope=user:email"
+        f"&state={state}"
     )
     return RedirectResponse(url=github_url, status_code=302)
 
 
 @router.get("/github/callback")
-async def github_callback(code: str, db: AsyncSession = Depends(get_db)):
-    frontend_url = settings.frontend_url.rstrip("/")
+async def github_callback(code: str, state: str | None = None, db: AsyncSession = Depends(get_db)):
+    # Retrieve the frontend URL from state parameter, fallback to settings.frontend_url
+    frontend_url = settings.frontend_url
+    if state:
+        try:
+            decoded_bytes = base64.urlsafe_b64decode(state.encode("utf-8"))
+            decoded_url = decoded_bytes.decode("utf-8")
+            # Basic validation to prevent open redirect vulnerabilities
+            parsed = urllib.parse.urlparse(decoded_url)
+            is_local = parsed.hostname in ("localhost", "127.0.0.1")
+            
+            # Check if it's in the allowed CORS origins or starts with localhost
+            is_allowed = is_local or any(
+                origin in decoded_url for origin in settings.cors_origins_list
+            )
+            
+            if is_allowed:
+                frontend_url = decoded_url
+        except Exception as e:
+            print(f"Error decoding state parameter: {e}")
+            
+    frontend_url = frontend_url.rstrip("/")
     try:
         # 1. Exchange code for access token
         async with httpx.AsyncClient() as client:

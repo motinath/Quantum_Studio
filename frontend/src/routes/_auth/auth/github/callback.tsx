@@ -2,15 +2,20 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useAuth, UserRole } from "@/lib/auth/auth-context";
 
-interface GitHubSuccessSearch {
-  token?: string;
-  user?: string;
-  error?: string;
-}
+const githubCallbackSearchSchema = z.object({
+  token: z.string().optional(),
+  user: z.string().optional(),
+  error: z.string().optional(),
+});
+
+type GitHubSuccessSearch = z.infer<typeof githubCallbackSearchSchema>;
 
 export const Route = createFileRoute("/_auth/auth/github/callback")({
   head: () => ({ meta: [{ title: "GitHub Sign In — Silicofeller" }] }),
+  validateSearch: (search) => githubCallbackSearchSchema.parse(search),
   component: GitHubSuccessPage,
 });
 
@@ -18,6 +23,7 @@ function GitHubSuccessPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_auth/auth/github/callback" }) as GitHubSuccessSearch;
   const [error, setError] = useState<string | null>(null);
+  const { completeGithubLogin } = useAuth();
 
   useEffect(() => {
     const handleSuccess = async () => {
@@ -38,26 +44,26 @@ function GitHubSuccessPage() {
       }
 
       try {
-        // Store token in localStorage
-        localStorage.setItem("qs_token", search.token);
-        console.log("[GitHub Auth] Token stored successfully");
+        const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+        const userResponse = await fetch(`${backendUrl}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${search.token}` },
+        });
         
-        // Fetch and cache user data
-        try {
-          const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
-          const userResponse = await fetch(`${backendUrl}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${search.token}` },
-          });
-          
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            localStorage.setItem("qs_user", JSON.stringify(userData));
-            console.log("[GitHub Auth] User data cached");
-          }
-        } catch (e) {
-          console.warn("[GitHub Auth] Failed to cache user data:", e);
-          // Continue anyway - user data will be fetched on first API call
+        if (!userResponse.ok) {
+          throw new Error("Failed to retrieve user profile from backend.");
         }
+        
+        const userData = await userResponse.json();
+        
+        // Complete the login in the Auth context to trigger React state updates
+        completeGithubLogin(search.token, {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role as UserRole,
+          organization: userData.organization,
+          initials: userData.initials || "?",
+        });
         
         toast.success("Signed in with GitHub!");
         navigate({ to: "/dashboard" });
@@ -70,7 +76,7 @@ function GitHubSuccessPage() {
     };
 
     handleSuccess();
-  }, [search, navigate]);
+  }, [search, navigate, completeGithubLogin]);
 
   return (
     <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
@@ -92,3 +98,4 @@ function GitHubSuccessPage() {
     </div>
   );
 }
+
