@@ -7,22 +7,11 @@ interface LogoProps {
 
 export function SilicofellerLogo({ className, iconClassName }: LogoProps) {
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      {/* Image 2 - Silicofeller logo (first) */}
+    <div className={cn("flex items-center", className)}>
       <img
         src="/logo-removebg-preview.png"
         alt="Silicofeller"
-        className={cn("h-10 w-auto object-contain", iconClassName)}
-      />
-
-      {/* Divider */}
-      <div className="h-8 w-px bg-gray-400" />
-
-      {/* Image 1 - NVIDIA Inception Program (second) */}
-      <img
-        src="/nvidia-inception-program-badge-rgb-1c-blk-for-screen.png"
-        alt="NVIDIA Inception Program"
-        className="h-10 w-auto object-contain"
+        className={cn("h-16 w-auto object-contain", iconClassName)}
       />
     </div>
   );
@@ -30,7 +19,7 @@ export function SilicofellerLogo({ className, iconClassName }: LogoProps) {
 
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div className={cn("flex items-center", className)}>
       <img
         src="/logo-removebg-preview.png"
         alt="Silicofeller"

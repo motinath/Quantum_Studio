@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OurTeamRouteImport } from './routes/our-team'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -41,6 +42,11 @@ import { Route as AppAboutRouteImport } from './routes/_app/about'
 const OurTeamRoute = OurTeamRouteImport.update({
   id: '/our-team',
   path: '/our-team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -179,6 +185,7 @@ const AppAboutRoute = AppAboutRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRoute
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRoute
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/blog': typeof BlogRoute
   '/our-team': typeof OurTeamRoute
   '/_app/about': typeof AppAboutRoute
   '/_app/admin': typeof AppAdminRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/blog'
     | '/our-team'
     | '/about'
     | '/admin'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/blog'
     | '/our-team'
     | '/about'
     | '/admin'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/blog'
     | '/our-team'
     | '/_app/about'
     | '/_app/admin'
@@ -357,6 +369,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  BlogRoute: typeof BlogRoute
   OurTeamRoute: typeof OurTeamRoute
 }
 
@@ -367,6 +380,13 @@ declare module '@tanstack/react-router' {
       path: '/our-team'
       fullPath: '/our-team'
       preLoaderRoute: typeof OurTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
@@ -629,6 +649,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  BlogRoute: BlogRoute,
   OurTeamRoute: OurTeamRoute,
 }
 export const routeTree = rootRouteImport
