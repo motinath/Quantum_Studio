@@ -1,0 +1,69 @@
+{
+  "constraints": {
+    "max_qubits": 5,
+    "min_qubits": 1,
+    "min_qubit_spacing_um": 1000,
+    "edge_margin_um": 200,
+    "min_frequency_detuning_mhz": 100
+  },
+  "hardware_defaults": {
+    "substrate": "sapphire",
+    "chip_width_mm": 12.0,
+    "chip_height_mm": 12.0,
+    "layers": [
+      { "name": "metal", "material": "aluminum", "thickness_nm": 200.0 },
+      { "name": "junction", "material": "Al/AlOx/Al", "thickness_nm": 50.0 },
+      { "name": "dielectric", "material": "silicon_oxide", "thickness_nm": 100.0 }
+    ],
+    "qubit_geometry": {
+      "component_type": "TransmonCross",
+      "orientation": "0",
+      "cross_width": "20um",
+      "cross_length": "200um",
+      "cross_gap": "20um",
+      "connector_type": "0",
+      "claw_length": "30um",
+      "ground_spacing": "5um",
+      "claw_width": "10um",
+      "claw_gap": "6um"
+    },
+    "resonator_geometry": {
+      "component_type": "RouteMeander",
+      "trace_width": "10um",
+      "trace_gap": "6um",
+      "total_length": "7mm",
+      "fillet": "50um",
+      "meander_spacing": "200um",
+      "meander_asymmetry": "0um",
+      "lead_start_straight": "0.1mm",
+      "lead_end_straight": "0.1mm"
+    },
+    "coupler_geometry": {
+      "component_type": "RoutePath",
+      "trace_width": "10um",
+      "trace_gap": "6um",
+      "fillet": "50um",
+      "lead_start_straight": "0.1mm",
+      "lead_end_straight": "0.1mm"
+    }
+  },
+  "physics_defaults": {
+    "qubit_frequencies_ghz": [5.0, 5.2, 5.0, 5.2, 5.0],
+    "anharmonicity_base_mhz": -330.0,
+    "anharmonicity_step_mhz": 5.0,
+    "junction_ej_ghz": 15.0,
+    "junction_ec_mhz": 300.0,
+    "resonator_offset_ghz": 2.0,
+    "coupler_strength_mhz": 4.0,
+    "coupler_type": "capacitive",
+    "resonator_coupling_type": "capacitive",
+    "resonator_coupling_strength_mhz": 50.0
+  },
+  "vocabulary": {
+    "word_map": {
+      "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+      "single": 1, "double": 2, "couple": 2, "pair": 2
+    },
+    "valid_topologies": ["line", "square", "star", "ring"]
+  }
+}
