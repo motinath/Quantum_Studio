@@ -50,9 +50,9 @@ def parse_prompt(prompt: str) -> dict[str, Any]:
     """Extract structured parameters from a natural language prompt."""
     p = prompt.lower()
 
-    # Qubit count
+    # Qubit count — match "qubit", "qbit", "transmon" and their plurals
     num_qubits = 5
-    m = re.search(r"(\d+)\s*[-\s]?\s*qubit", p) or re.search(r"(\d+)\s*q\b", p)
+    m = re.search(r"(\d+)\s*[-\s]?\s*(?:qubit|qbit|transmon)s?", p) or re.search(r"(\d+)\s*q\b", p)
     if m:
         num_qubits = min(int(m.group(1)), settings.max_qubits)
     elif "surface code" in p:
@@ -70,7 +70,7 @@ def parse_prompt(prompt: str) -> dict[str, Any]:
         topology = "heavy_hex"
     elif "ring" in p or "loop" in p:
         topology = "ring"
-    elif "chain" in p or "linear" in p:
+    elif "chain" in p or "linear" in p or "line" in p:
         topology = "line"
     elif "surface code" in p:
         topology = "grid"

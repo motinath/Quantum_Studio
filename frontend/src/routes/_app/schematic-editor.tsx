@@ -54,9 +54,20 @@ chip MyChip
 end`;
 
 function SchematicEditorPage() {
-  const { updateActive } = useDesign();
+  const { updateActive, activeConversation } = useDesign();
   const { activeProject, saveDesign } = useProject();
-  const [source, setSource] = useState(PLACEHOLDER);
+  
+  // Initialize with the generated source from the AI, or fallback to placeholder
+  const initialSource = activeConversation?.result?.qclang_source || PLACEHOLDER;
+  const [source, setSource] = useState(initialSource);
+
+  // Keep in sync if the user generates a new chip via the AI Assistant
+  useEffect(() => {
+    if (activeConversation?.result?.qclang_source) {
+      setSource(activeConversation.result.qclang_source);
+    }
+  }, [activeConversation?.result?.qclang_source]);
+
   const [errors, setErrors] = useState<Array<{ severity: string; message: string; line?: number }>>(
     [],
   );

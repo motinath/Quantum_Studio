@@ -207,15 +207,17 @@ def predict_intent(prompt: str) -> Dict[str, Any]:
 def has_explicit_qubit_count(prompt: str) -> Optional[int]:
     """If prompt contains an explicit N-qubit phrase, return N (digits or number words)."""
     p = prompt.lower()
+    # Match "qubit", "qbit", "transmon" and their plurals
+    _QUBIT_WORDS = r"(?:qubits?|qbits?|transmons?)"
     for pattern in [
-        r"\b(\d+)\s*-?\s*qubits?\b",
-        r"\bqubits?\s*(\d+)\b",
+        rf"\b(\d+)\s*-?\s*{_QUBIT_WORDS}\b",
+        rf"\b{_QUBIT_WORDS}\s*(\d+)\b",
     ]:
         m = re.search(pattern, p)
         if m:
             return int(m.group(1))
     for word, num in WORD_TO_NUM.items():
-        if re.search(rf"\b{word}\s*-?\s*qubits?\b", p) or re.search(rf"\bqubits?\s*{word}\b", p):
+        if re.search(rf"\b{word}\s*-?\s*{_QUBIT_WORDS}\b", p) or re.search(rf"\b{_QUBIT_WORDS}\s*{word}\b", p):
             return num
     return None
 
