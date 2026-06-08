@@ -65,10 +65,10 @@ const NAV: { label: string | null; items: NavItem[] }[] = [
     label: "Design",
     items: [
       { title: "Projects", url: "/projects", icon: FolderKanban },
-      { title: "Designer", url: "/designer", icon: Sparkles },
+      { title: "ChatBot", url: "/designer", icon: Sparkles },
       { title: "Architecture Explorer", url: "/architecture-explorer", icon: Network },
+      { title: "Designer", url: "/layout-viewer", icon: LayoutTemplate },
       { title: "Schematic Editor", url: "/schematic-editor", icon: PenSquare },
-      { title: "Layout Viewer", url: "/layout-viewer", icon: LayoutTemplate },
       { title: "Component Library", url: "/component-library", icon: Library },
     ],
   },
@@ -119,8 +119,8 @@ export function AppSidebar() {
             </span>
           ) : (
             <SilicofellerLogo
-              className="brightness-0 invert scale-[0.85] origin-left"
-              iconClassName="h-8"
+              className="brightness-0 invert scale-[1.2] "
+              iconClassName="h-16"
             />
           )}
         </Link>
