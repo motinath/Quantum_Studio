@@ -48,8 +48,8 @@ Quantum Studio is a full-stack electronic design automation (EDA) tool for desig
 ### 1 — Clone
 
 ```bash
-git clone <repo-url>
-cd Quantum_Studio-work
+git clone https://github.com/motinath/Quantum_Studio.git
+cd Quantum_Studio
 ```
 
 ### 2 — Backend
@@ -62,7 +62,8 @@ py setup.py            # Windows
 python3 setup.py       # macOS / Linux
 
 # Copy example env (SQLite is the default — no Postgres needed)
-cp .env.example .env
+copy .env.example .env   # Windows
+cp .env.example .env     # macOS / Linux
 
 # Start the API server (hot-reload enabled)
 .venv\Scripts\python run.py     # Windows
