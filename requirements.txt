@@ -1,0 +1,10 @@
+pydantic
+pydantic-settings
+networkx
+matplotlib
+fastapi
+uvicorn
+qiskit-metal
+pandas==1.5.3
+geopandas==0.12.2
+shapely==2.0.1

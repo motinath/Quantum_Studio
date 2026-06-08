@@ -1,0 +1,24 @@
+# QCLang Specification v1.0 – Single Qubit Chip
+# Minimal design: one transmon qubit with one readout resonator.
+
+chip:
+  name: "single-qubit-chip"
+  width: 10.0    # mm
+  height: 10.0   # mm
+  substrate: silicon
+
+qubits:
+  - id: Q0
+    frequency: 5.0         # GHz
+    anharmonicity: -330.0   # MHz
+    junction:
+      type: single
+
+resonators:
+  - id: R0
+    frequency: 7.0         # GHz
+    target: Q0
+    coupling_type: capacitive
+    coupling_strength: 50.0  # MHz
+
+couplers: []

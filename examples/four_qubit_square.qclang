@@ -1,0 +1,79 @@
+# QCLang Specification v1.0 – Four Qubit Square Topology
+# 2×2 grid layout:
+#   Q0 — Q1
+#   |     |
+#   Q2 — Q3
+# Nearest-neighbor coupling on edges.
+
+chip:
+  name: "four-qubit-square"
+  width: 10.0    # mm
+  height: 10.0   # mm
+  substrate: silicon
+
+qubits:
+  - id: Q0
+    frequency: 5.0
+    anharmonicity: -330.0
+
+  - id: Q1
+    frequency: 5.2
+    anharmonicity: -320.0
+
+  - id: Q2
+    frequency: 5.1
+    anharmonicity: -325.0
+
+  - id: Q3
+    frequency: 5.3
+    anharmonicity: -315.0
+
+resonators:
+  - id: R0
+    frequency: 7.0
+    target: Q0
+    coupling_type: capacitive
+    coupling_strength: 50.0
+
+  - id: R1
+    frequency: 7.2
+    target: Q1
+    coupling_type: capacitive
+    coupling_strength: 50.0
+
+  - id: R2
+    frequency: 7.1
+    target: Q2
+    coupling_type: capacitive
+    coupling_strength: 50.0
+
+  - id: R3
+    frequency: 7.3
+    target: Q3
+    coupling_type: capacitive
+    coupling_strength: 50.0
+
+couplers:
+  - id: C01
+    source: Q0
+    target: Q1
+    strength: 4.0
+    type: capacitive
+
+  - id: C02
+    source: Q0
+    target: Q2
+    strength: 4.0
+    type: capacitive
+
+  - id: C13
+    source: Q1
+    target: Q3
+    strength: 4.0
+    type: capacitive
+
+  - id: C23
+    source: Q2
+    target: Q3
+    strength: 4.0
+    type: capacitive

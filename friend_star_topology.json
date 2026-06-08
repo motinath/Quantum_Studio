@@ -1,0 +1,301 @@
+{
+  "chip": {
+    "name": "5_qubit_star_chip",
+    "width_mm": 12.0,
+    "height_mm": 12.0,
+    "substrate": "sapphire",
+    "layers": [
+      {
+        "name": "metal",
+        "material": "aluminum",
+        "thickness_nm": 200.0
+      },
+      {
+        "name": "junction",
+        "material": "Al/AlOx/Al",
+        "thickness_nm": 50.0
+      },
+      {
+        "name": "dielectric",
+        "material": "silicon_oxide",
+        "thickness_nm": 100.0
+      }
+    ]
+  },
+  "qubits": [
+    {
+      "id": "Q0",
+      "component_type": "TransmonCross",
+      "frequency_ghz": 5.0,
+      "anharmonicity_mhz": -330.0,
+      "junction": {
+        "type": "single",
+        "ej_ghz": 15.0,
+        "ec_mhz": 300.0
+      },
+      "geometry": {
+        "pos_x": "0um",
+        "pos_y": "0um",
+        "orientation": "0",
+        "cross_width": "20um",
+        "cross_length": "200um",
+        "cross_gap": "20um",
+        "connector_type": "0",
+        "claw_length": "30um",
+        "ground_spacing": "5um",
+        "claw_width": "10um",
+        "claw_gap": "6um"
+      }
+    },
+    {
+      "id": "Q1",
+      "component_type": "TransmonCross",
+      "frequency_ghz": 5.2,
+      "anharmonicity_mhz": -325.0,
+      "junction": {
+        "type": "single",
+        "ej_ghz": 15.0,
+        "ec_mhz": 300.0
+      },
+      "geometry": {
+        "pos_x": "0um",
+        "pos_y": "1000um",
+        "orientation": "0",
+        "cross_width": "20um",
+        "cross_length": "200um",
+        "cross_gap": "20um",
+        "connector_type": "0",
+        "claw_length": "30um",
+        "ground_spacing": "5um",
+        "claw_width": "10um",
+        "claw_gap": "6um"
+      }
+    },
+    {
+      "id": "Q2",
+      "component_type": "TransmonCross",
+      "frequency_ghz": 5.0,
+      "anharmonicity_mhz": -320.0,
+      "junction": {
+        "type": "single",
+        "ej_ghz": 15.0,
+        "ec_mhz": 300.0
+      },
+      "geometry": {
+        "pos_x": "1000um",
+        "pos_y": "0um",
+        "orientation": "0",
+        "cross_width": "20um",
+        "cross_length": "200um",
+        "cross_gap": "20um",
+        "connector_type": "0",
+        "claw_length": "30um",
+        "ground_spacing": "5um",
+        "claw_width": "10um",
+        "claw_gap": "6um"
+      }
+    },
+    {
+      "id": "Q3",
+      "component_type": "TransmonCross",
+      "frequency_ghz": 5.2,
+      "anharmonicity_mhz": -315.0,
+      "junction": {
+        "type": "single",
+        "ej_ghz": 15.0,
+        "ec_mhz": 300.0
+      },
+      "geometry": {
+        "pos_x": "0um",
+        "pos_y": "-1000um",
+        "orientation": "0",
+        "cross_width": "20um",
+        "cross_length": "200um",
+        "cross_gap": "20um",
+        "connector_type": "0",
+        "claw_length": "30um",
+        "ground_spacing": "5um",
+        "claw_width": "10um",
+        "claw_gap": "6um"
+      }
+    },
+    {
+      "id": "Q4",
+      "component_type": "TransmonCross",
+      "frequency_ghz": 5.0,
+      "anharmonicity_mhz": -310.0,
+      "junction": {
+        "type": "single",
+        "ej_ghz": 15.0,
+        "ec_mhz": 300.0
+      },
+      "geometry": {
+        "pos_x": "-1000um",
+        "pos_y": "0um",
+        "orientation": "0",
+        "cross_width": "20um",
+        "cross_length": "200um",
+        "cross_gap": "20um",
+        "connector_type": "0",
+        "claw_length": "30um",
+        "ground_spacing": "5um",
+        "claw_width": "10um",
+        "claw_gap": "6um"
+      }
+    }
+  ],
+  "resonators": [
+    {
+      "id": "R0",
+      "component_type": "RouteMeander",
+      "frequency_ghz": 7.0,
+      "target_qubit": "Q0",
+      "coupling_type": "capacitive",
+      "coupling_strength_mhz": 50.0,
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "total_length": "7mm",
+        "fillet": "50um",
+        "meander_spacing": "200um",
+        "meander_asymmetry": "0um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "R1",
+      "component_type": "RouteMeander",
+      "frequency_ghz": 7.2,
+      "target_qubit": "Q1",
+      "coupling_type": "capacitive",
+      "coupling_strength_mhz": 50.0,
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "total_length": "7mm",
+        "fillet": "50um",
+        "meander_spacing": "200um",
+        "meander_asymmetry": "0um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "R2",
+      "component_type": "RouteMeander",
+      "frequency_ghz": 7.0,
+      "target_qubit": "Q2",
+      "coupling_type": "capacitive",
+      "coupling_strength_mhz": 50.0,
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "total_length": "7mm",
+        "fillet": "50um",
+        "meander_spacing": "200um",
+        "meander_asymmetry": "0um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "R3",
+      "component_type": "RouteMeander",
+      "frequency_ghz": 7.2,
+      "target_qubit": "Q3",
+      "coupling_type": "capacitive",
+      "coupling_strength_mhz": 50.0,
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "total_length": "7mm",
+        "fillet": "50um",
+        "meander_spacing": "200um",
+        "meander_asymmetry": "0um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "R4",
+      "component_type": "RouteMeander",
+      "frequency_ghz": 7.0,
+      "target_qubit": "Q4",
+      "coupling_type": "capacitive",
+      "coupling_strength_mhz": 50.0,
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "total_length": "7mm",
+        "fillet": "50um",
+        "meander_spacing": "200um",
+        "meander_asymmetry": "0um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    }
+  ],
+  "couplers": [
+    {
+      "id": "C01",
+      "component_type": "RoutePath",
+      "source_qubit": "Q0",
+      "target_qubit": "Q1",
+      "strength_mhz": 4.0,
+      "coupler_type": "capacitive",
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "fillet": "50um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "C02",
+      "component_type": "RoutePath",
+      "source_qubit": "Q0",
+      "target_qubit": "Q2",
+      "strength_mhz": 4.0,
+      "coupler_type": "capacitive",
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "fillet": "50um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "C03",
+      "component_type": "RoutePath",
+      "source_qubit": "Q0",
+      "target_qubit": "Q3",
+      "strength_mhz": 4.0,
+      "coupler_type": "capacitive",
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "fillet": "50um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    },
+    {
+      "id": "C04",
+      "component_type": "RoutePath",
+      "source_qubit": "Q0",
+      "target_qubit": "Q4",
+      "strength_mhz": 4.0,
+      "coupler_type": "capacitive",
+      "geometry": {
+        "trace_width": "10um",
+        "trace_gap": "6um",
+        "fillet": "50um",
+        "lead_start_straight": "0.1mm",
+        "lead_end_straight": "0.1mm"
+      }
+    }
+  ]
+}

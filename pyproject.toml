@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "quantum-studio"
+version = "1.0.0"
+description = "Quantum Design Automation – QCLang to fabrication-ready superconducting chip layouts"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Quantum Studio Team"}
+]
+
+dependencies = [
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0",
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.23",
+    "pyyaml>=6.0",
+    "shapely>=2.0",
+]
+
+[project.scripts]
+quantum-studio = "quantum_studio.__main__:main"
+
+[project.optional-dependencies]
+metal = ["quantum-metal>=0.7"]
+gds = ["gdstk>=0.9"]
+full = ["quantum-metal>=0.7", "gdstk>=0.9"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "httpx>=0.24",
+    "ruff>=0.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["quantum_studio*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

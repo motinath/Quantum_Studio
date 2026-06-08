@@ -1,0 +1,54 @@
+# QCLang Specification v1.0 – Three Qubit Linear Chain
+# Linear topology: Q0 – Q1 – Q2
+# Each qubit has its own readout resonator.
+
+chip:
+  name: "three-qubit-linear"
+  width: 10.0    # mm
+  height: 10.0   # mm
+  substrate: silicon
+
+qubits:
+  - id: Q0
+    frequency: 5.0         # GHz
+    anharmonicity: -330.0   # MHz
+
+  - id: Q1
+    frequency: 5.25        # GHz
+    anharmonicity: -320.0   # MHz
+
+  - id: Q2
+    frequency: 5.1         # GHz
+    anharmonicity: -325.0   # MHz
+
+resonators:
+  - id: R0
+    frequency: 7.0         # GHz
+    target: Q0
+    coupling_type: capacitive
+    coupling_strength: 50.0
+
+  - id: R1
+    frequency: 7.3         # GHz
+    target: Q1
+    coupling_type: capacitive
+    coupling_strength: 55.0
+
+  - id: R2
+    frequency: 7.1         # GHz
+    target: Q2
+    coupling_type: capacitive
+    coupling_strength: 50.0
+
+couplers:
+  - id: C01
+    source: Q0
+    target: Q1
+    strength: 4.5
+    type: capacitive
+
+  - id: C12
+    source: Q1
+    target: Q2
+    strength: 4.5
+    type: capacitive
