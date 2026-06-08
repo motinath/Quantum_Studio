@@ -57,15 +57,15 @@ ExportEngine.export_all()  ← JSON, QCLang (.qc), GDS-II ASCII,
 | Tool | Version |
 |------|---------|
 | Python | 3.10+ |
-| Node.js | 18+ |
+| Node.js | 18+ (or Bun 1.0+) |
 
 ### Backend
 
 ```bash
 cd backend
-py setup.py            # Windows — creates .venv + installs deps
+py setup.py            # Windows — creates .venv + installs all deps
 python3 setup.py       # macOS/Linux
-cp .env.example .env
+cp .env.example .env   # then fill in SECRET_KEY and OAuth credentials (see below)
 .venv\Scripts\python run.py     # Windows
 .venv/bin/python run.py         # macOS/Linux
 ```
@@ -76,8 +76,8 @@ API: `http://localhost:5000` · Swagger: `http://localhost:5000/docs`
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm install            # or: bun install
+npm run dev            # or: bun run dev
 ```
 
 App: `http://localhost:8080`
@@ -390,13 +390,44 @@ Any password works with the demo accounts when the backend is offline.
 
 ## Environment
 
+Copy `.env.example` to `.env` and fill in the values below.
+
 ```env
-# Dev (SQLite — no Postgres needed)
-DATABASE_URL=sqlite+aiosqlite:///./dev.db
+# ── Required ──────────────────────────────────────────────────────────────────
+DATABASE_URL=sqlite+aiosqlite:///./dev.db   # or Postgres URL in production
+SECRET_KEY=your-secret-key-min-32-chars    # any random 32+ char string
 APP_ENV=development
 MAX_QUBITS=256
 CORS_ORIGINS=http://localhost:8080,http://localhost:5173,http://localhost:3000
-SECRET_KEY=your-secret-key-min-32-chars
-# Optional
+
+# ── Google OAuth (optional — enables "Continue with Google") ──────────────────
+# Create at: https://console.cloud.google.com/apis/credentials
+# Authorised JS origin: http://localhost:8080
+GOOGLE_CLIENT_ID=....apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...
+
+# ── GitHub OAuth (optional — enables "Continue with GitHub") ──────────────────
+# Create at: https://github.com/settings/applications/new
+#   Homepage URL:               http://localhost:8080
+#   Authorization callback URL: http://localhost:5000/api/auth/github/callback
+GITHUB_CLIENT_ID=Ov23li...
+GITHUB_CLIENT_SECRET=...
+FRONTEND_URL=http://localhost:8080   # where backend redirects after GitHub login
+
+# ── AI Assistant (optional) ───────────────────────────────────────────────────
 ANTHROPIC_API_KEY=sk-ant-...
+
+# ── SMTP (optional — OTP emails; prints to terminal if not configured) ─────────
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=you@gmail.com
+SMTP_PASSWORD=your-app-password
 ```
+
+### Authentication Methods
+
+| Method | What to configure |
+|--------|-------------------|
+| Email + OTP | Nothing — works out of the box (OTP printed to backend terminal) |
+| Google OAuth | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` |
+| GitHub OAuth | `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` + `FRONTEND_URL` |
