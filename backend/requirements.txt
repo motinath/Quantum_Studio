@@ -15,8 +15,12 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.20
 
+# ── OAuth ─────────────────────────────────────────────────────────────────────
+google-auth==2.29.0        # Google OAuth ID token verification
+httpx==0.28.1              # GitHub OAuth — async HTTP calls to GitHub API
+
 # ── HTTP / Utils ──────────────────────────────────────────────────────────────
-httpx==0.28.1
+requests==2.31.0
 aiofiles==24.1.0
 python-dotenv==1.0.1
 

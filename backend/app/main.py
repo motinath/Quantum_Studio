@@ -31,6 +31,39 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s  %(message)s")
 
 
+# ── Admin User Seeder ─────────────────────────────────────────────────────────
+
+async def seed_admin_user() -> None:
+    from app.database import AsyncSessionLocal
+    from app.auth import hash_password
+    from app.models import User, UserRole
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as session:
+        try:
+            admin_email = "admin@quantumstudio.com"
+            result = await session.execute(select(User).where(User.email == admin_email))
+            admin_user = result.scalar_one_or_none()
+
+            if not admin_user:
+                log.info("Seeding predefined admin user...")
+                admin = User(
+                    name="System Administrator",
+                    email=admin_email,
+                    hashed_password=hash_password("adminpassword123"),
+                    role=UserRole.admin,
+                    organization="Quantum Studio",
+                )
+                session.add(admin)
+                await session.commit()
+                log.info("Predefined admin user created successfully!")
+                log.info(f"Credentials -> Email: {admin_email} | Password: adminpassword123")
+            else:
+                log.info("Predefined admin user already exists.")
+        except Exception as e:
+            log.error(f"Failed to seed admin user: {e}")
+
+
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -41,6 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         await init_db()
         log.info("Database ready.")
+        await seed_admin_user()
     except Exception as e:
         log.warning(f"Database init skipped (will run without persistence): {e}")
 

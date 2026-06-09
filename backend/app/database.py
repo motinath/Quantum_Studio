@@ -16,6 +16,7 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+import sqlalchemy as sa
 
 from app.config import settings
 
@@ -81,4 +82,13 @@ async def init_db() -> None:
     """Create all tables if they do not exist."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        # Auto-upgrade database tables by adding new columns if missing
+        for col_name, col_type in [("oauth_provider", "VARCHAR(32)"), ("oauth_subject", "VARCHAR(255)")]:
+            try:
+                await conn.execute(sa.text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                log.info(f"Database migration: Added column {col_name} to users table.")
+            except Exception:
+                # Column already exists, ignore
+                pass
     log.info("Database tables ensured.")

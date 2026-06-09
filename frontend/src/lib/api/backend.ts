@@ -11,7 +11,14 @@ const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000"
 // ── Generic fetch helper ──────────────────────────────────────────────────────
 
 async function api<T>(path: string, options: RequestInit = {}, fallback?: T): Promise<T> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("qs_token") : null;
+  let token: string | null = null;
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      token = localStorage.getItem("qs_token");
+    }
+  } catch {
+    // SSR or localStorage blocked
+  }
   const res = await fetch(`${BACKEND_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -409,18 +416,41 @@ export async function askClaude(
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export async function loginUser(email: string, password: string) {
-  const formData = new FormData();
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    organization: string;
+    initials: string;
+  };
+}
+
+export async function loginUser(email: string, password: string): Promise<AuthResponse> {
+  const formData = new URLSearchParams();
   formData.append("username", email);
   formData.append("password", password);
   const res = await fetch(`${BACKEND_URL}/api/auth/token`, {
     method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: formData,
   });
-  if (!res.ok) throw new Error("Login failed");
-  const data = await res.json();
-  if (data.access_token && typeof window !== "undefined") {
-    localStorage.setItem("qs_token", data.access_token);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Login failed" }));
+    throw new Error(body.detail ?? "Login failed");
+  }
+  const data: AuthResponse = await res.json();
+  // Store token immediately — guard for SSR
+  try {
+    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("qs_token", data.access_token);
+      console.log("[API] loginUser: token stored in localStorage");
+    }
+  } catch (e) {
+    console.warn("[API] loginUser: failed to store token", e);
   }
   return data;
 }
@@ -430,16 +460,78 @@ export async function registerUser(
   email: string,
   password: string,
   organization: string,
-) {
-  const data = await api("/api/auth/register", {
+  otp: string,
+): Promise<AuthResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
     method: "POST",
-    body: JSON.stringify({ name, email, password, organization }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password, organization, otp }),
   });
-  const d = data as { access_token?: string };
-  if (d.access_token && typeof window !== "undefined") {
-    localStorage.setItem("qs_token", d.access_token);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(body.detail ?? "Registration failed");
+  }
+  const data: AuthResponse = await res.json();
+  // Store token immediately — guard for SSR
+  try {
+    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("qs_token", data.access_token);
+      console.log("[API] registerUser: token stored in localStorage");
+    }
+  } catch (e) {
+    console.warn("[API] registerUser: failed to store token", e);
   }
   return data;
+}
+
+export async function sendOTP(email: string): Promise<{ detail: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to send code" }));
+    throw new Error(body.detail ?? "Failed to send code");
+  }
+  return res.json();
+}
+
+export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: idToken }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Google login failed" }));
+    throw new Error(body.detail ?? "Google login failed");
+  }
+  const data: AuthResponse = await res.json();
+  try {
+    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("qs_token", data.access_token);
+      console.log("[API] loginWithGoogle: token stored in localStorage");
+    }
+  } catch (e) {
+    console.warn("[API] loginWithGoogle: failed to store token", e);
+  }
+  return data;
+}
+
+export async function getCurrentUser(token: string): Promise<AuthResponse["user"]> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error("Session expired");
+  }
+  return res.json();
+}
+
+export function initiateGithubLogin(): void {
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+  window.location.href = `${backendUrl}/api/auth/github/authorize`;
 }
 
 // ── Client-side fallback generator ───────────────────────────────────────────
