@@ -1,0 +1,48 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.gitignore
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Local dev files
+*.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Tests (not needed in production image)
+tests/
+.pytest_cache/
+
+# Docs
+docs/
+*.md
+
+# Alembic (run migrations from CI/CD, not container startup by default)
+# Keep alembic/ in image for potential use, but ignore local dev migrations cache
+alembic/versions/__pycache__

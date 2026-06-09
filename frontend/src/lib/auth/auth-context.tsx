@@ -20,27 +20,6 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 
 export type Role = UserRole;
 
-export const DEMO_ACCOUNTS = [
-  {
-    role: "admin" as UserRole,
-    name: "Admin User",
-    email: "admin@silicofeller.com",
-    organization: "Silicofeller Labs",
-  },
-  {
-    role: "org_manager" as UserRole,
-    name: "Organization Manager",
-    email: "manager@quantumlabs.com",
-    organization: "Quantum Labs",
-  },
-  {
-    role: "engineer" as UserRole,
-    name: "Quantum Engineer",
-    email: "engineer@quantumlabs.com",
-    organization: "Quantum Labs",
-  },
-];
-
 export function canAccess(role: UserRole, resource: string): boolean {
   if (role === "admin") return true;
   if (resource === "admin") return false;
@@ -134,42 +113,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Surface friendly messages for common HTTP errors
       if (msg.includes("401")) return { ok: false, error: "Incorrect email or password" };
       if (msg.includes("422")) return { ok: false, error: "Invalid credentials format" };
-      // Backend offline — fall back to demo account matching
-      return _signInOffline(email);
+      return { ok: false, error: msg };
     }
-  };
-
-  // Offline fallback: match demo accounts by email (no password check — dev only)
-  const _signInOffline = (email: string): { ok: boolean; error?: string } => {
-    const demo = DEMO_ACCOUNTS.find(
-      (a) => a.email.toLowerCase() === email.toLowerCase(),
-    );
-    if (!demo) {
-      return { ok: false, error: "Backend offline and no matching demo account" };
-    }
-    const newUser: User = {
-      id: `u_${demo.role}`,
-      name: demo.name,
-      email: demo.email,
-      role: demo.role,
-      organization: demo.organization,
-      initials: _makeInitials(demo.name),
-    };
-    setUser(newUser);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
-    return { ok: true };
   };
 
   // Quick demo login (bypasses real auth — development convenience only)
   const signInAs = (role: UserRole) => {
-    const demo = DEMO_ACCOUNTS.find((a) => a.role === role) ?? DEMO_ACCOUNTS[0];
+    if (!import.meta.env.DEV) {
+      throw new Error("Demo login is only available in development mode");
+    }
     const newUser: User = {
-      id: `u_${demo.role}`,
-      name: demo.name,
-      email: demo.email,
-      role: demo.role,
-      organization: demo.organization,
-      initials: _makeInitials(demo.name),
+      id: `u_${role}`,
+      name: `${role} User`,
+      email: `${role}@demo.local`,
+      role,
+      organization: "Demo Organization",
+      initials: _makeInitials(`${role} User`),
     };
     setUser(newUser);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));

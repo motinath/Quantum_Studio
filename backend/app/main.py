@@ -29,8 +29,9 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from app.config import settings
 from app.database import init_db
+from app.middleware.auth_state import auth_state_middleware
 from app.middleware.rate_limit import limiter
-from app.routers import auth, claude, generate, materials, projects, qclang, simulations, tapeout, verification
+from app.routers import admin, auth, claude, generate, materials, projects, qclang, simulations, tapeout, verification
 from app.routers import design  # V2 design pipeline
 
 log = logging.getLogger(__name__)
@@ -87,6 +88,13 @@ app = FastAPI(
 app.state.limiter = limiter
 
 
+# ── Prometheus metrics ──────────────────────────────────────────────────────
+
+from prometheus_fastapi_instrumentator import Instrumentator
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+
 # ── CORS ──────────────────────────────────────────────────────────────────────
 
 # In development, allow ANY origin so preflight OPTIONS never returns 400.
@@ -102,14 +110,60 @@ app.add_middleware(
 )
 
 
-# ── Request timing middleware ─────────────────────────────────────────────────
+# ── Auth state middleware (must run before rate limiting) ─────────────────────
+
+@app.middleware("http")
+async def auth_state(request: Request, call_next):
+    return await auth_state_middleware(request, call_next)
+
+
+# ── Request timing + structured logging + telemetry middleware ─────────────────
+
+async def _log_usage(request: Request, response, elapsed_ms: float) -> None:
+    """Fire-and-forget telemetry logging to the database."""
+    try:
+        from app.database import engine
+        from app.models import ApiUsage
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        async with AsyncSession(engine) as session:
+            usage = ApiUsage(
+                user_id=getattr(request.state, "user_id", None),
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration_ms=elapsed_ms,
+                user_agent=request.headers.get("User-Agent"),
+                ip_address=request.client.host if request.client else None,
+            )
+            session.add(usage)
+            await session.commit()
+    except Exception:
+        # Telemetry must never break the request
+        pass
+
 
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
+    import asyncio
+    import uuid
+
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:12])
+    request.state.request_id = request_id
     t0 = time.perf_counter()
     response = await call_next(request)
     elapsed = round((time.perf_counter() - t0) * 1000, 2)
     response.headers["X-Process-Time-Ms"] = str(elapsed)
+    response.headers["X-Request-ID"] = request_id
+    log.info(
+        "method=%s path=%s status=%s ms=%s request_id=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed,
+        request_id,
+    )
+    asyncio.create_task(_log_usage(request, response, elapsed))
     return response
 
 
@@ -134,8 +188,9 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 
+# Legacy / unversioned routes (backward compatibility)
 app.include_router(generate.router)          # /health  /generate
-app.include_router(generate.sub_router)      # /api/generate/frequency-plan|placement|drc|netlist|em-simulation
+app.include_router(generate.sub_router)      # /api/generate/...
 app.include_router(auth.router)              # /api/auth/...
 app.include_router(projects.router)          # /api/projects/...
 app.include_router(qclang.router)            # /api/qclang/...
@@ -145,6 +200,18 @@ app.include_router(tapeout.router)           # /api/tapeout/...
 app.include_router(materials.router)         # /api/materials/...
 app.include_router(claude.router)            # /api/claude/...
 app.include_router(design.router)            # /api/design/... (V2 pipeline)
+app.include_router(admin.router)             # /api/admin/...
+
+# API v1 versioned aliases (recommended for new clients)
+app.include_router(auth.router,       prefix="/api/v1")
+app.include_router(projects.router,   prefix="/api/v1")
+app.include_router(qclang.router,    prefix="/api/v1")
+app.include_router(simulations.router, prefix="/api/v1")
+app.include_router(verification.router, prefix="/api/v1")
+app.include_router(tapeout.router,   prefix="/api/v1")
+app.include_router(materials.router, prefix="/api/v1")
+app.include_router(claude.router,    prefix="/api/v1")
+app.include_router(admin.router,     prefix="/api/v1")
 
 
 # ── Frequency plan (legacy frontend compat) ───────────────────────────────────

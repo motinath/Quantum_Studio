@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+import secrets
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -102,3 +103,80 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 @limiter.limit("60/minute")
 async def get_me(request: Request, current_user: User = Depends(get_current_user)):
     return _user_to_dict(current_user)
+
+
+# ── Email verification ───────────────────────────────────────────────────────
+
+class VerifyEmailResponse(BaseModel):
+    message: str
+
+
+@router.get("/verify-email/{token}", response_model=VerifyEmailResponse)
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    """Verify email address using the token sent to the user's inbox."""
+    result = await db.execute(select(User).where(User.email_verification_token == token))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+    user.email_verified = True
+    user.email_verification_token = None
+    await db.commit()
+    return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification")
+@limiter.limit("3/minute")
+async def resend_verification(request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Resend email verification token (returns token in dev; integrate SMTP in prod)."""
+    if current_user.email_verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified")
+    token = secrets.token_urlsafe(32)
+    current_user.email_verification_token = token
+    await db.commit()
+    # TODO: integrate SendGrid / AWS SES for production
+    return {"message": "Verification token generated", "token": token}
+
+
+# ── Password reset ─────────────────────────────────────────────────────────────
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Initiate password reset (returns token in dev; integrate SMTP in prod)."""
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        # Don't reveal whether email exists
+        return {"message": "If the email exists, a reset link has been sent"}
+    token = secrets.token_urlsafe(32)
+    user.password_reset_token = token
+    user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+    await db.commit()
+    # TODO: integrate SendGrid / AWS SES for production
+    return {"message": "If the email exists, a reset link has been sent", "dev_token": token}
+
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using the token from forgot-password."""
+    result = await db.execute(select(User).where(User.password_reset_token == body.token))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+    if not user.password_reset_expires or user.password_reset_expires < datetime.utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token expired")
+    user.hashed_password = hash_password(body.new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    await db.commit()
+    return {"message": "Password reset successfully"}

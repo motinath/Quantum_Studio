@@ -1,0 +1,10 @@
+Generic single-database configuration with an async SQLAlchemy backend.
+
+Migrations use a synchronous engine since Alembic itself is synchronous.
+The sync database URL is derived automatically from the async URL.
+
+Usage:
+    cd backend
+    alembic revision --autogenerate -m "description"
+    alembic upgrade head
+    alembic downgrade -1

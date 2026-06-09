@@ -66,9 +66,15 @@ def _project_out(p: Project) -> dict:
 async def list_projects(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    limit: int = 50,
+    offset: int = 0,
 ) -> list[dict]:
     result = await db.execute(
-        select(Project).where(Project.owner_id == user.id).order_by(Project.updated_at.desc())
+        select(Project)
+        .where(Project.owner_id == user.id, Project.is_deleted == False)
+        .order_by(Project.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     return [_project_out(p) for p in result.scalars().all()]
 
@@ -103,7 +109,7 @@ async def get_project(
     user: User = Depends(get_current_user),
 ) -> dict:
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == False)
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -121,7 +127,7 @@ async def update_project(
     user: User = Depends(get_current_user),
 ) -> dict:
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == False)
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -141,12 +147,32 @@ async def delete_project(
     user: User = Depends(get_current_user),
 ) -> None:
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == False)
     )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    await db.delete(project)
+    project.is_deleted = True
+    project.deleted_at = datetime.utcnow()
+
+
+@router.post("/{project_id}/restore")
+async def restore_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    """Restore a soft-deleted project."""
+    result = await db.execute(
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == True)
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found or not deleted")
+    project.is_deleted = False
+    project.deleted_at = None
+    project.updated_at = datetime.utcnow()
+    return _project_out(project)
 
 
 @router.post("/{project_id}/save-design")
@@ -158,7 +184,7 @@ async def save_design(
 ) -> dict:
     """Save a GenerateResponse payload to a project."""
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == False)
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -180,7 +206,7 @@ async def create_version(
     user: User = Depends(get_current_user),
 ) -> dict:
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == False)
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -212,7 +238,7 @@ async def list_versions(
 ) -> list[dict]:
     # Verify ownership
     proj_result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == user.id)
+        select(Project).where(Project.id == project_id, Project.owner_id == user.id, Project.is_deleted == False)
     )
     if not proj_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Project not found")

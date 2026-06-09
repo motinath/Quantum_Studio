@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +44,7 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
 def decode_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-    except JWTError as exc:
+    except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

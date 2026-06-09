@@ -50,5 +50,15 @@ class Settings(BaseSettings):
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
 
+    @property
+    def alembic_database_url(self) -> str:
+        """Return a synchronous database URL for Alembic migrations."""
+        url = self.database_url
+        if url.startswith("sqlite+aiosqlite://"):
+            return url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+        if url.startswith("postgresql+asyncpg://"):
+            return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        return url
+
 
 settings = Settings()

@@ -18,11 +18,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app.auth import get_optional_user
 from app.config import settings
+from app.middleware.rate_limit import user_limiter
 from app.models import User
 
 router = APIRouter(prefix="/api/design", tags=["design-v2"])
@@ -86,7 +87,9 @@ class ExportAllRequest(BaseModel):
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.post("/generate")
+@user_limiter.limit("10/minute")
 async def generate_design(
+    request: Request,
     body: ConstraintsRequest,
     user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
@@ -100,6 +103,7 @@ async def generate_design(
         from app.constraints.constraints import (
             DesignConstraints, FabConstraints, FreqConstraints,
         )
+        from app.services.cache import get_cached_design, set_cached_design
         from app.services.design_pipeline import run_design_pipeline
 
         n = min(body.qubit_count, MAX_QUBITS)
@@ -120,14 +124,25 @@ async def generate_design(
                 **(body.freq or {}),
             ),
         )
-        return await run_design_pipeline(constraints)
+
+        cached = get_cached_design("design_pipeline", constraints)
+        if cached is not None:
+            cached["cached"] = True
+            return cached
+
+        result = await run_design_pipeline(constraints)
+        if result.get("success"):
+            set_cached_design("design_pipeline", constraints, result, ttl=1800)
+        return result
 
     except Exception as exc:
         return {"success": False, "error": str(exc)}
 
 
 @router.post("/generate-from-graph")
+@user_limiter.limit("10/minute")
 async def generate_from_graph(
+    request: Request,
     body: GraphDesignRequest,
     user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
@@ -143,7 +158,8 @@ async def generate_from_graph(
 
 
 @router.post("/validate")
-async def validate_graph(body: GraphDesignRequest) -> dict[str, Any]:
+@user_limiter.limit("30/minute")
+async def validate_graph(request: Request, body: GraphDesignRequest) -> dict[str, Any]:
     """Structural graph validation — fast, no physics computation."""
     try:
         from app.core.design_graph.serializer import dict_to_graph
@@ -161,7 +177,8 @@ async def validate_graph(body: GraphDesignRequest) -> dict[str, Any]:
 
 
 @router.post("/route")
-async def route_placement(body: RouteRequest) -> dict[str, Any]:
+@user_limiter.limit("20/minute")
+async def route_placement(request: Request, body: RouteRequest) -> dict[str, Any]:
     """
     Run routing on a placement dict (from /api/generate/placement).
     Returns coupler, resonator, and feedline route segments.
@@ -174,7 +191,8 @@ async def route_placement(body: RouteRequest) -> dict[str, Any]:
 
 
 @router.post("/drc")
-async def run_advanced_drc(body: DRCRequest) -> dict[str, Any]:
+@user_limiter.limit("10/minute")
+async def run_advanced_drc(request: Request, body: DRCRequest) -> dict[str, Any]:
     """
     Run the advanced 4-domain DRC (geometry, frequency, fabrication, connectivity).
     """
@@ -192,7 +210,8 @@ async def run_advanced_drc(body: DRCRequest) -> dict[str, Any]:
 
 
 @router.post("/export")
-async def export_design(body: ExportRequest) -> dict[str, Any]:
+@user_limiter.limit("20/minute")
+async def export_design(request: Request, body: ExportRequest) -> dict[str, Any]:
     """Export a design in a single format (json|qclang|gds|svg|dxf|pdf)."""
     try:
         from app.core.design_graph.serializer import dict_to_graph
@@ -220,7 +239,8 @@ async def export_design(body: ExportRequest) -> dict[str, Any]:
 
 
 @router.post("/export-all")
-async def export_all_formats(body: ExportAllRequest) -> dict[str, Any]:
+@user_limiter.limit("5/minute")
+async def export_all_formats(request: Request, body: ExportAllRequest) -> dict[str, Any]:
     """Export design in all formats simultaneously."""
     try:
         from app.core.design_graph.serializer import dict_to_graph
@@ -249,17 +269,25 @@ async def export_all_formats(body: ExportAllRequest) -> dict[str, Any]:
 
 
 @router.post("/frequency-plan")
-async def frequency_plan_from_constraints(body: ConstraintsRequest) -> dict[str, Any]:
+@user_limiter.limit("20/minute")
+async def frequency_plan_from_constraints(request: Request, body: ConstraintsRequest) -> dict[str, Any]:
     """
     Constraint-driven frequency planning.
     Respects qubit_band, readout_band, and min-detuning constraints.
     """
     try:
         from app.constraints.constraints import DesignConstraints, FreqConstraints
+        from app.services.cache import get_cached_design, set_cached_design
         from app.services.materials import get_physics_substrate
         from app.services.physics.frequency_planner import FrequencyPlanner
 
         n    = min(body.qubit_count, MAX_QUBITS)
+        cache_key = {"n": n, "substrate": body.substrate, "topology": body.topology, "target_freq_ghz": body.target_freq_ghz}
+        cached = get_cached_design("frequency_plan", cache_key)
+        if cached is not None:
+            cached["cached"] = True
+            return cached
+
         sub  = get_physics_substrate(body.substrate)
         plan = FrequencyPlanner(
             n         = n,
@@ -267,7 +295,7 @@ async def frequency_plan_from_constraints(body: ConstraintsRequest) -> dict[str,
             topology  = body.topology,
         ).plan()
 
-        return {
+        result = {
             "n":          n,
             "topology":   body.topology,
             "epsilon_eff": plan.epsilon_eff,
@@ -286,6 +314,8 @@ async def frequency_plan_from_constraints(body: ConstraintsRequest) -> dict[str,
             } for r in plan.resonators},
             "warnings":   [w.message for w in plan.warnings],
         }
+        set_cached_design("frequency_plan", cache_key, result, ttl=3600)
+        return result
     except Exception as exc:
         return {"error": str(exc)}
 

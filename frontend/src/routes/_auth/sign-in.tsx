@@ -10,7 +10,7 @@ import { FormField } from "@/components/auth/form-field";
 import { PasswordInput } from "@/components/auth/password-input";
 import { SocialButton } from "@/components/auth/social-button";
 import { QuantumHero } from "@/components/auth/quantum-hero";
-import { DEMO_ACCOUNTS, useAuth, type Role } from "@/lib/auth/auth-context";
+import { useAuth, type Role } from "@/lib/auth/auth-context";
 import { Card } from "@/components/ui/card";
 import { Shield, Building2, Cpu } from "lucide-react";
 
@@ -63,9 +63,12 @@ function SignInPage() {
   };
 
   const quickLogin = (role: Role) => {
+    if (!import.meta.env.DEV) {
+      toast.error("Demo login is only available in development mode");
+      return;
+    }
     signInAs(role);
-    const acct = DEMO_ACCOUNTS.find((a) => a.role === role);
-    toast.success(`Signed in as ${acct?.name}`);
+    toast.success(`Signed in as ${role} user`);
     navigate({ to: "/" });
   };
 
@@ -163,55 +166,57 @@ function SignInPage() {
             </div>
           </AuthCard>
 
-          <div>
-            <div className="mb-3 flex items-center gap-2">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Demo quick login
-              </span>
-              <div className="h-px flex-1 bg-border" />
+          {import.meta.env.DEV && (
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Demo quick login
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="grid gap-2.5">
+                {[
+                  {
+                    role: "admin" as const,
+                    icon: Shield,
+                    title: "Admin",
+                    desc: "admin@demo.local",
+                  },
+                  {
+                    role: "org_manager" as const,
+                    icon: Building2,
+                    title: "Organization Manager",
+                    desc: "manager@demo.local",
+                  },
+                  {
+                    role: "engineer" as const,
+                    icon: Cpu,
+                    title: "Engineer",
+                    desc: "engineer@demo.local",
+                  },
+                ].map((q) => (
+                  <Card
+                    key={q.role}
+                    onClick={() => quickLogin(q.role)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && quickLogin(q.role)}
+                    className="flex cursor-pointer items-center gap-3 rounded-2xl border-border p-3 shadow-none transition-colors hover:bg-[color:var(--accent-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
+                      <q.icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-foreground">{q.title}</div>
+                      <div className="truncate text-xs text-muted-foreground">{q.desc}</div>
+                    </div>
+                    <span className="text-xs font-medium text-accent">Sign in →</span>
+                  </Card>
+                ))}
+              </div>
             </div>
-            <div className="grid gap-2.5">
-              {[
-                {
-                  role: "admin" as const,
-                  icon: Shield,
-                  title: "Admin",
-                  desc: "admin@silicofeller.com",
-                },
-                {
-                  role: "org_manager" as const,
-                  icon: Building2,
-                  title: "Organization Manager",
-                  desc: "manager@quantumlabs.com",
-                },
-                {
-                  role: "engineer" as const,
-                  icon: Cpu,
-                  title: "Engineer",
-                  desc: "engineer@quantumlabs.com",
-                },
-              ].map((q) => (
-                <Card
-                  key={q.role}
-                  onClick={() => quickLogin(q.role)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && quickLogin(q.role)}
-                  className="flex cursor-pointer items-center gap-3 rounded-2xl border-border p-3 shadow-none transition-colors hover:bg-[color:var(--accent-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
-                    <q.icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-foreground">{q.title}</div>
-                    <div className="truncate text-xs text-muted-foreground">{q.desc}</div>
-                  </div>
-                  <span className="text-xs font-medium text-accent">Sign in →</span>
-                </Card>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       </section>
     </div>
