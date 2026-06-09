@@ -40,9 +40,14 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Josephson Junction (Dolan)",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.JJ_Dolan",
-    description: 'The base "JJ_Dolan" inherits the "QComponent" class. A Dolan-bridge style Josephson junction primitive.',
+    description:
+      'The base "JJ_Dolan" inherits the "QComponent" class. A Dolan-bridge style Josephson junction primitive.',
     image: IMG("jj_dolan.png"),
-    defaultParams: { JJ_pad_lower_width: "25um", JJ_pad_lower_height: "10um", finger_lower_width: "1um" },
+    defaultParams: {
+      JJ_pad_lower_width: "25um",
+      JJ_pad_lower_height: "10um",
+      finger_lower_width: "1um",
+    },
     pins: [],
     tags: ["josephson", "junction", "dolan"],
   },
@@ -51,7 +56,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Josephson Junction (Manhattan)",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.JJ_Manhattan",
-    description: 'The base "JJ_Manhattan" inherits the "QComponent" class. A Manhattan-style Josephson junction primitive.',
+    description:
+      'The base "JJ_Manhattan" inherits the "QComponent" class. A Manhattan-style Josephson junction primitive.',
     image: IMG("jj_manhattan.png"),
     defaultParams: { JJ_pad_width: "25um", JJ_pad_height: "10um", finger_width: "1um" },
     pins: [],
@@ -62,7 +68,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "SNAIL",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.SNAIL",
-    description: "A SNAIL (Superconducting Nonlinear Asymmetric Inductive eLement) — three large junctions in a loop with one small junction.",
+    description:
+      "A SNAIL (Superconducting Nonlinear Asymmetric Inductive eLement) — three large junctions in a loop with one small junction.",
     image: IMG("SNAIL1.png"),
     defaultParams: { loop_width: "20um", loop_height: "10um", n_junctions: 3 },
     pins: [],
@@ -73,7 +80,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "SQUID Loop",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.SQUID_LOOP",
-    description: 'The base "SQUID_LOOP" inherits the "QComponent" class. A two-junction superconducting loop.',
+    description:
+      'The base "SQUID_LOOP" inherits the "QComponent" class. A two-junction superconducting loop.',
     image: IMG("SQUID_LOOP.png"),
     defaultParams: { loop_width: "20um", loop_height: "20um" },
     pins: [],
@@ -84,7 +92,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Star Qubit",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.star_qubit",
-    description: "A single configurable circular qubit with multiple radially-arranged coupling pads.",
+    description:
+      "A single configurable circular qubit with multiple radially-arranged coupling pads.",
     image: IMG("StarQubit1.png"),
     defaultParams: { radius: "300um", number_of_connectors: 4, gap_couplers: "25um" },
     pins: ["pin0", "pin1", "pin2", "pin3"],
@@ -95,7 +104,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Transmon Concentric",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.transmon_concentric",
-    description: "The base TransmonConcentric class — two concentric pads forming the qubit capacitance.",
+    description:
+      "The base TransmonConcentric class — two concentric pads forming the qubit capacitance.",
     image: IMG("TransmonConcentric1.png"),
     defaultParams: { rad_o: "170um", rad_i: "115um", gap: "35um" },
     pins: ["readout", "drive"],
@@ -117,7 +127,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Transmon Cross",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.transmon_cross",
-    description: "The base TransmonCross class — cross-shaped (Xmon) transmon with four coupling arms.",
+    description:
+      "The base TransmonCross class — cross-shaped (Xmon) transmon with four coupling arms.",
     image: IMG("TransmonCross1.png"),
     defaultParams: { cross_width: "20um", cross_length: "200um", cross_gap: "20um" },
     pins: ["north", "south", "east", "west"],
@@ -139,7 +150,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Transmon Interdigitated",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.transmon_interdigitated",
-    description: 'The base "TransmonInterdigitated" inherits the "QComponent" class. Interdigitated-pad transmon for higher capacitance density.',
+    description:
+      'The base "TransmonInterdigitated" inherits the "QComponent" class. Interdigitated-pad transmon for higher capacitance density.',
     image: IMG("TransmonInterdigitated1.png"),
     defaultParams: { pad_width: "200um", finger_length: "100um", finger_count: 5 },
     pins: ["a", "b"],
@@ -150,7 +162,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Transmon Pocket",
     category: "qubits",
     modulePath: "qiskit_metal.qlibrary.qubits.transmon_pocket",
-    description: "The base TransmonPocket class — two rectangular pads inside a ground-plane pocket.",
+    description:
+      "The base TransmonPocket class — two rectangular pads inside a ground-plane pocket.",
     image: IMG("TransmonPocket1.png"),
     defaultParams: { pad_gap: "30um", pad_width: "455um", pad_height: "90um" },
     pins: ["readout", "bus_01", "bus_02"],
@@ -196,7 +209,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Cap N Interdigital Tee",
     category: "couplers",
     modulePath: "qiskit_metal.qlibrary.couplers.cap_n_interdigital_tee",
-    description: "Three-pin (+) structure built around a primary two-pin CPW with an N-finger interdigital capacitor on the third pin.",
+    description:
+      "Three-pin (+) structure built around a primary two-pin CPW with an N-finger interdigital capacitor on the third pin.",
     image: IMG("CapNInterdigitalTee1.png"),
     defaultParams: { prime_width: "10um", prime_gap: "6um", finger_length: "40um" },
     pins: ["prime_start", "prime_end", "second_end"],
@@ -207,7 +221,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Coupled Line Tee",
     category: "couplers",
     modulePath: "qiskit_metal.qlibrary.couplers.coupled_line_tee",
-    description: "Three-pin (+) structure built around a primary two-pin CPW with a coupled-line tap on the third pin.",
+    description:
+      "Three-pin (+) structure built around a primary two-pin CPW with a coupled-line tap on the third pin.",
     image: IMG("CoupledLineTee1.png"),
     defaultParams: { prime_width: "10um", prime_gap: "6um", coupling_length: "100um" },
     pins: ["prime_start", "prime_end", "second_end"],
@@ -218,7 +233,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Line Tee",
     category: "couplers",
     modulePath: "qiskit_metal.qlibrary.couplers.line_tee",
-    description: "Three-pin (+) structure built around a primary two-pin CPW with a direct CPW tap on the third pin.",
+    description:
+      "Three-pin (+) structure built around a primary two-pin CPW with a direct CPW tap on the third pin.",
     image: IMG("LineTee1.png"),
     defaultParams: { prime_width: "10um", prime_gap: "6um", t_length: "30um" },
     pins: ["prime_start", "prime_end", "second_end"],
@@ -275,7 +291,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Route Meander",
     category: "tlines",
     modulePath: "qiskit_metal.qlibrary.tlines.meandered",
-    description: "Implements a simple CPW with a single meander section. Useful for delay lines and λ/4 resonators.",
+    description:
+      "Implements a simple CPW with a single meander section. Useful for delay lines and λ/4 resonators.",
     image: IMG("RouteMeander1.png"),
     defaultParams: { total_length: "7mm", trace_width: "10um", trace_gap: "6um" },
     pins: ["start", "end"],
@@ -286,7 +303,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Route Mixed",
     category: "tlines",
     modulePath: "qiskit_metal.qlibrary.tlines.mixed_path",
-    description: "Fully featured routing class allowing different types of segments along the path.",
+    description:
+      "Fully featured routing class allowing different types of segments along the path.",
     image: IMG("RouteMixed1.png"),
     defaultParams: { trace_width: "10um", trace_gap: "6um" },
     pins: ["start", "end"],
@@ -297,7 +315,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Route Pathfinder",
     category: "tlines",
     modulePath: "qiskit_metal.qlibrary.tlines.pathfinder",
-    description: "Non-meandered CPW that combines an A* pathfinding algorithm with collision avoidance.",
+    description:
+      "Non-meandered CPW that combines an A* pathfinding algorithm with collision avoidance.",
     image: IMG("RoutePathfinder1.png"),
     defaultParams: { trace_width: "10um", trace_gap: "6um", step_size: "0.25mm" },
     pins: ["start", "end"],
@@ -413,7 +432,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Cap N Interdigital",
     category: "lumped",
     modulePath: "qiskit_metal.qlibrary.lumped.cap_n_interdigital",
-    description: "Generates a two-pin (+) structure comprised of a north CPW transmission line and an N-finger interdigital capacitor.",
+    description:
+      "Generates a two-pin (+) structure comprised of a north CPW transmission line and an N-finger interdigital capacitor.",
     image: IMG("CapNInterdigital1.png"),
     defaultParams: { finger_length: "40um", finger_count: 5, cap_gap: "6um" },
     pins: ["a", "b"],
@@ -424,7 +444,8 @@ export const QISKIT_CATALOG: QiskitComponent[] = [
     label: "Resonator Coil Rect",
     category: "lumped",
     modulePath: "qiskit_metal.qlibrary.lumped.resonator_coil_rect",
-    description: "A rectangular spiral resonator parameterised by total length. The X dimension is fixed; Y scales to satisfy length.",
+    description:
+      "A rectangular spiral resonator parameterised by total length. The X dimension is fixed; Y scales to satisfy length.",
     image: IMG("ResonatorCoilRect1.png"),
     defaultParams: { length: "7mm", trace_width: "10um", trace_gap: "6um" },
     pins: ["in", "out"],

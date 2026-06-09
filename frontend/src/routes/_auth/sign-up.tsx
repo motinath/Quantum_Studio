@@ -348,7 +348,9 @@ function SignUpPage() {
                   provider="github"
                   label="Sign up with GitHub"
                   onClick={() => {
-                    const url = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+                    const url = (
+                      import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000"
+                    ).replace(/\/$/, "");
                     window.location.href = `${url}/api/auth/github/authorize`;
                   }}
                 />

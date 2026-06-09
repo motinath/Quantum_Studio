@@ -6,9 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  GitBranch, GitCommit, Tag, Clock, Cpu, Check,
-  Loader2, ArrowRight, RotateCcw, Download, Diff,
-  AlertTriangle, Plus,
+  GitBranch,
+  GitCommit,
+  Tag,
+  Clock,
+  Cpu,
+  Check,
+  Loader2,
+  ArrowRight,
+  RotateCcw,
+  Download,
+  Diff,
+  AlertTriangle,
+  Plus,
 } from "lucide-react";
 import { useDesign } from "@/lib/design-context";
 import { useProject } from "@/lib/project-context";
@@ -20,7 +30,7 @@ export const Route = createFileRoute("/_app/version-control")({
 });
 
 const BACKEND = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
-const token = () => (typeof window !== "undefined" ? localStorage.getItem("qs_token") ?? "" : "");
+const token = () => (typeof window !== "undefined" ? (localStorage.getItem("qs_token") ?? "") : "");
 
 type BackendVersion = { id: string; tag: string; message: string; created_at: string };
 
@@ -36,30 +46,33 @@ type TimelineItem = {
   snapshotData?: unknown;
 };
 
-const COLORS = ["#7C3AED","#2563EB","#059669","#D97706","#DC2626","#0891B2","#7C3AED"];
+const COLORS = ["#7C3AED", "#2563EB", "#059669", "#D97706", "#DC2626", "#0891B2", "#7C3AED"];
 
 function VersionControlPage() {
   const { conversations, activeConversation, setActiveId, updateConversationResult } = useDesign();
   const { activeProject } = useProject();
 
   const [backendVersions, setBackendVersions] = useState<BackendVersion[]>([]);
-  const [tagInput, setTagInput]   = useState("v1.0");
-  const [msgInput, setMsgInput]   = useState("");
-  const [saving,   setSaving]     = useState(false);
-  const [savedId,  setSavedId]    = useState<string | null>(null);
-  const [restored, setRestored]   = useState<string | null>(null);
-  const [diffA,    setDiffA]      = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("v1.0");
+  const [msgInput, setMsgInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [restored, setRestored] = useState<string | null>(null);
+  const [diffA, setDiffA] = useState<string | null>(null);
   const [loadingVersions, setLoadingVersions] = useState(false);
 
   // Load backend versions when active project changes
   useEffect(() => {
-    if (!activeProject) { setBackendVersions([]); return; }
+    if (!activeProject) {
+      setBackendVersions([]);
+      return;
+    }
     setLoadingVersions(true);
     fetch(`${BACKEND}/api/projects/${activeProject.id}/versions`, {
       headers: { Authorization: `Bearer ${token()}` },
     })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setBackendVersions(Array.isArray(data) ? data : []))
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setBackendVersions(Array.isArray(data) ? data : []))
       .catch(() => setBackendVersions([]))
       .finally(() => setLoadingVersions(false));
   }, [activeProject]);
@@ -76,17 +89,20 @@ function VersionControlPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token()}`,
           },
-          body: JSON.stringify({ tag: tagInput.trim() || "v0.1", message: msgInput.trim() || "Manual snapshot" }),
+          body: JSON.stringify({
+            tag: tagInput.trim() || "v0.1",
+            message: msgInput.trim() || "Manual snapshot",
+          }),
         });
         if (res.ok) {
           const v = await res.json();
-          setBackendVersions(prev => [v, ...prev]);
+          setBackendVersions((prev) => [v, ...prev]);
           setSavedId(v.id);
           setTimeout(() => setSavedId(null), 2500);
         }
       } else {
         // No project — just show success feedback (local-only)
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
         setSavedId("local_" + Date.now());
         setTimeout(() => setSavedId(null), 2500);
       }
@@ -115,33 +131,35 @@ function VersionControlPage() {
 
   // Build unified timeline: AI sessions + backend versions
   const sessionItems: TimelineItem[] = conversations
-    .filter(c => c.result)
+    .filter((c) => c.result)
     .map((c, i) => ({
-      id:         c.id,
-      tag:        c.title.slice(0, 24),
-      message:    `AI-generated: ${c.result!.topology} · ${c.result!.num_qubits}Q`,
-      timestamp:  c.updatedAt,
+      id: c.id,
+      tag: c.title.slice(0, 24),
+      message: `AI-generated: ${c.result!.topology} · ${c.result!.num_qubits}Q`,
+      timestamp: c.updatedAt,
       num_qubits: c.result!.num_qubits,
-      topology:   c.result!.topology,
+      topology: c.result!.topology,
       drc_passed: c.result!.drc?.passed ?? false,
-      source:     "session" as const,
+      source: "session" as const,
     }));
 
   const backendItems: TimelineItem[] = backendVersions.map((v, i) => ({
-    id:         v.id,
-    tag:        v.tag,
-    message:    v.message || "Snapshot",
-    timestamp:  new Date(v.created_at).getTime(),
+    id: v.id,
+    tag: v.tag,
+    message: v.message || "Snapshot",
+    timestamp: new Date(v.created_at).getTime(),
     num_qubits: activeConversation?.result?.num_qubits ?? 0,
-    topology:   activeConversation?.result?.topology ?? "—",
+    topology: activeConversation?.result?.topology ?? "—",
     drc_passed: activeConversation?.result?.drc?.passed ?? false,
-    source:     "snapshot" as const,
+    source: "snapshot" as const,
   }));
 
   const timeline = [...sessionItems, ...backendItems].sort((a, b) => b.timestamp - a.timestamp);
 
-  const diffItem = diffA ? timeline.find(t => t.id === diffA) : null;
-  const activeItem = activeConversation ? timeline.find(t => t.id === activeConversation.id) : null;
+  const diffItem = diffA ? timeline.find((t) => t.id === diffA) : null;
+  const activeItem = activeConversation
+    ? timeline.find((t) => t.id === activeConversation.id)
+    : null;
 
   return (
     <div className="h-full overflow-y-auto bg-[#F8F9FB]">
@@ -156,7 +174,10 @@ function VersionControlPage() {
               <p className="text-sm text-slate-500">
                 Snapshot · Tag · Diff · Restore
                 {activeProject && (
-                  <> · Project: <strong className="text-accent">{activeProject.name}</strong></>
+                  <>
+                    {" "}
+                    · Project: <strong className="text-accent">{activeProject.name}</strong>
+                  </>
                 )}
               </p>
             </div>
@@ -181,17 +202,23 @@ function VersionControlPage() {
                   <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <Cpu className="h-3.5 w-3.5 text-accent shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-800 truncate">{activeConversation.title}</p>
+                      <p className="text-xs font-bold text-slate-800 truncate">
+                        {activeConversation.title}
+                      </p>
                       <p className="text-[10px] text-slate-400">
-                        {activeConversation.result.num_qubits}Q · {activeConversation.result.topology}
+                        {activeConversation.result.num_qubits}Q ·{" "}
+                        {activeConversation.result.topology}
                       </p>
                     </div>
-                    <Badge variant="outline" className={cn(
-                      "rounded-full text-[9px] font-bold px-1.5 py-0.5 shrink-0",
-                      activeConversation.result.drc?.passed
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    )}>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "rounded-full text-[9px] font-bold px-1.5 py-0.5 shrink-0",
+                        activeConversation.result.drc?.passed
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200",
+                      )}
+                    >
                       DRC {activeConversation.result.drc?.passed ? "✓" : "!"}
                     </Badge>
                   </div>
@@ -205,17 +232,35 @@ function VersionControlPage() {
 
                   <div>
                     <p className="text-[10px] font-bold text-slate-500 mb-1">Version Tag</p>
-                    <Input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="v1.0" className="rounded-xl text-xs h-8 border-slate-200" />
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="v1.0"
+                      className="rounded-xl text-xs h-8 border-slate-200"
+                    />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-slate-500 mb-1">Message</p>
-                    <Input value={msgInput} onChange={e => setMsgInput(e.target.value)} placeholder="e.g. Adjusted qubit frequencies" className="rounded-xl text-xs h-8 border-slate-200" />
+                    <Input
+                      value={msgInput}
+                      onChange={(e) => setMsgInput(e.target.value)}
+                      placeholder="e.g. Adjusted qubit frequencies"
+                      className="rounded-xl text-xs h-8 border-slate-200"
+                    />
                   </div>
 
-                  <Button onClick={saveSnapshot} disabled={saving} className="w-full rounded-xl bg-accent text-white text-xs font-bold h-9">
-                    {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      : savedId ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-300" />
-                      : <GitCommit className="mr-1.5 h-3.5 w-3.5" />}
+                  <Button
+                    onClick={saveSnapshot}
+                    disabled={saving}
+                    className="w-full rounded-xl bg-accent text-white text-xs font-bold h-9"
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : savedId ? (
+                      <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-300" />
+                    ) : (
+                      <GitCommit className="mr-1.5 h-3.5 w-3.5" />
+                    )}
                     {savedId ? "Saved!" : "Save Snapshot"}
                   </Button>
                 </div>
@@ -230,20 +275,32 @@ function VersionControlPage() {
                 </p>
                 <div className="space-y-2">
                   {[
-                    { label: "Qubits",   a: activeItem.num_qubits, b: diffItem.num_qubits },
-                    { label: "Topology", a: activeItem.topology,   b: diffItem.topology },
-                    { label: "DRC",
+                    { label: "Qubits", a: activeItem.num_qubits, b: diffItem.num_qubits },
+                    { label: "Topology", a: activeItem.topology, b: diffItem.topology },
+                    {
+                      label: "DRC",
                       a: activeItem.drc_passed ? "PASS" : "FAIL",
-                      b: diffItem.drc_passed   ? "PASS" : "FAIL" },
-                  ].map(row => {
+                      b: diffItem.drc_passed ? "PASS" : "FAIL",
+                    },
+                  ].map((row) => {
                     const changed = String(row.a) !== String(row.b);
                     return (
-                      <div key={row.label} className="flex items-center justify-between py-1 border-b border-slate-50">
-                        <span className="text-[10px] text-slate-500 font-semibold w-16">{row.label}</span>
+                      <div
+                        key={row.label}
+                        className="flex items-center justify-between py-1 border-b border-slate-50"
+                      >
+                        <span className="text-[10px] text-slate-500 font-semibold w-16">
+                          {row.label}
+                        </span>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold text-accent">{row.a}</span>
                           <ArrowRight className="h-3 w-3 text-slate-300" />
-                          <span className={cn("text-[10px] font-bold", changed ? "text-amber-600" : "text-slate-400")}>
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold",
+                              changed ? "text-amber-600" : "text-slate-400",
+                            )}
+                          >
                             {row.b}
                           </span>
                         </div>
@@ -251,7 +308,10 @@ function VersionControlPage() {
                     );
                   })}
                 </div>
-                <button onClick={() => setDiffA(null)} className="mt-3 text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer">
+                <button
+                  onClick={() => setDiffA(null)}
+                  className="mt-3 text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
                   Clear diff
                 </button>
               </Card>
@@ -283,7 +343,8 @@ function VersionControlPage() {
 
                 <div className="space-y-3 pl-12">
                   {timeline.map((item, i) => {
-                    const isActive = item.source === "session" && item.id === activeConversation?.id;
+                    const isActive =
+                      item.source === "session" && item.id === activeConversation?.id;
                     const isDiffTarget = diffA === item.id;
                     const color = COLORS[i % COLORS.length];
 
@@ -301,42 +362,66 @@ function VersionControlPage() {
                           style={{ background: color }}
                         />
 
-                        <Card className={cn(
-                          "rounded-2xl border bg-white p-4 shadow-sm transition-all",
-                          isActive ? "border-accent ring-1 ring-accent/20" : "border-slate-200",
-                          isDiffTarget ? "ring-2 ring-amber-300" : ""
-                        )}>
+                        <Card
+                          className={cn(
+                            "rounded-2xl border bg-white p-4 shadow-sm transition-all",
+                            isActive ? "border-accent ring-1 ring-accent/20" : "border-slate-200",
+                            isDiffTarget ? "ring-2 ring-amber-300" : "",
+                          )}
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-black text-slate-900">{item.tag}</span>
+                                <span className="text-xs font-black text-slate-900">
+                                  {item.tag}
+                                </span>
                                 {isActive && (
-                                  <Badge variant="outline" className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-accent-soft text-accent border-accent/20">
+                                  <Badge
+                                    variant="outline"
+                                    className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-accent-soft text-accent border-accent/20"
+                                  >
                                     CURRENT
                                   </Badge>
                                 )}
-                                <Badge variant="outline" className={cn(
-                                  "rounded-full text-[9px] font-bold px-2 py-0.5",
-                                  item.source === "snapshot"
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-blue-50 text-blue-700 border-blue-200"
-                                )}>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "rounded-full text-[9px] font-bold px-2 py-0.5",
+                                    item.source === "snapshot"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : "bg-blue-50 text-blue-700 border-blue-200",
+                                  )}
+                                >
                                   {item.source === "snapshot" ? "💾 DB Snapshot" : "🤖 AI Session"}
                                 </Badge>
-                                <Badge variant="outline" className={cn(
-                                  "rounded-full text-[9px] font-bold px-2 py-0.5",
-                                  item.drc_passed
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-rose-50 text-rose-700 border-rose-200"
-                                )}>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "rounded-full text-[9px] font-bold px-2 py-0.5",
+                                    item.drc_passed
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : "bg-rose-50 text-rose-700 border-rose-200",
+                                  )}
+                                >
                                   DRC {item.drc_passed ? "✓" : "✗"}
                                 </Badge>
                               </div>
-                              <p className="text-[11px] text-slate-600 mt-1 font-semibold">{item.message}</p>
+                              <p className="text-[11px] text-slate-600 mt-1 font-semibold">
+                                {item.message}
+                              </p>
                               <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
-                                <span className="flex items-center gap-1"><Cpu className="h-2.5 w-2.5" />{item.num_qubits}Q</span>
-                                <span className="flex items-center gap-1"><GitBranch className="h-2.5 w-2.5" />{item.topology}</span>
-                                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{new Date(item.timestamp).toLocaleString()}</span>
+                                <span className="flex items-center gap-1">
+                                  <Cpu className="h-2.5 w-2.5" />
+                                  {item.num_qubits}Q
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <GitBranch className="h-2.5 w-2.5" />
+                                  {item.topology}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-2.5 w-2.5" />
+                                  {new Date(item.timestamp).toLocaleString()}
+                                </span>
                               </div>
                             </div>
 
@@ -348,7 +433,7 @@ function VersionControlPage() {
                                   "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
                                   isDiffTarget
                                     ? "border-amber-300 bg-amber-50 text-amber-600"
-                                    : "border-slate-200 text-slate-400 hover:border-accent/40 hover:text-accent"
+                                    : "border-slate-200 text-slate-400 hover:border-accent/40 hover:text-accent",
                                 )}
                               >
                                 <Diff className="h-3.5 w-3.5" />
@@ -366,9 +451,11 @@ function VersionControlPage() {
                                   className="h-7 px-2 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-500 hover:border-accent/40 hover:text-accent transition-all cursor-pointer"
                                   title="Set as active session"
                                 >
-                                  {restored === item.id
-                                    ? <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                    : "Load"}
+                                  {restored === item.id ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                  ) : (
+                                    "Load"
+                                  )}
                                 </button>
                               )}
                             </div>

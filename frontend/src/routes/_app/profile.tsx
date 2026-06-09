@@ -17,18 +17,18 @@ export const Route = createFileRoute("/_app/profile")({
 });
 
 const ROLE_LABELS: Record<string, string> = {
-  admin:       "Admin",
+  admin: "Admin",
   org_manager: "Organization Manager",
-  engineer:    "Quantum Engineer",
+  engineer: "Quantum Engineer",
 };
 
 function ProfilePage() {
   const { user } = useAuth();
   const { projects, activeProject } = useProject();
 
-  const [name,  setName]  = useState(user?.name  ?? "");
+  const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [org,   setOrg]   = useState(user?.organization ?? "");
+  const [org, setOrg] = useState(user?.organization ?? "");
   const [saved, setSaved] = useState(false);
 
   const save = () => {
@@ -63,7 +63,10 @@ function ProfilePage() {
             <div>
               <p className="text-lg font-black text-slate-900">{user.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="rounded-full text-[10px] font-bold px-2.5 py-0.5 bg-accent-soft text-accent border-accent/20">
+                <Badge
+                  variant="outline"
+                  className="rounded-full text-[10px] font-bold px-2.5 py-0.5 bg-accent-soft text-accent border-accent/20"
+                >
                   {ROLE_LABELS[user.role] ?? user.role}
                 </Badge>
                 <span className="text-xs text-slate-400">{user.organization}</span>
@@ -73,43 +76,83 @@ function ProfilePage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="name" className="text-xs font-bold text-slate-600">Full Name</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} className="mt-1.5 h-9 rounded-xl text-sm border-slate-200" />
+              <Label htmlFor="name" className="text-xs font-bold text-slate-600">
+                Full Name
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1.5 h-9 rounded-xl text-sm border-slate-200"
+              />
             </div>
             <div>
-              <Label htmlFor="email" className="text-xs font-bold text-slate-600">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1.5 h-9 rounded-xl text-sm border-slate-200" />
+              <Label htmlFor="email" className="text-xs font-bold text-slate-600">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1.5 h-9 rounded-xl text-sm border-slate-200"
+              />
             </div>
             <div>
-              <Label htmlFor="org" className="text-xs font-bold text-slate-600">Organization</Label>
-              <Input id="org" value={org} onChange={e => setOrg(e.target.value)} className="mt-1.5 h-9 rounded-xl text-sm border-slate-200" />
+              <Label htmlFor="org" className="text-xs font-bold text-slate-600">
+                Organization
+              </Label>
+              <Input
+                id="org"
+                value={org}
+                onChange={(e) => setOrg(e.target.value)}
+                className="mt-1.5 h-9 rounded-xl text-sm border-slate-200"
+              />
             </div>
             <div>
               <Label className="text-xs font-bold text-slate-600">Role</Label>
               <div className="mt-1.5 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center px-3">
                 <ShieldCheck className="h-3.5 w-3.5 text-slate-400 mr-2" />
-                <span className="text-sm text-slate-600">{ROLE_LABELS[user.role] ?? user.role}</span>
+                <span className="text-sm text-slate-600">
+                  {ROLE_LABELS[user.role] ?? user.role}
+                </span>
               </div>
             </div>
           </div>
 
-          <Button onClick={save} className="mt-5 h-9 rounded-xl bg-accent text-white text-xs font-bold px-5">
-            {saved ? <><Check className="mr-1.5 h-3.5 w-3.5 text-emerald-300" /> Saved!</> : "Save Profile"}
+          <Button
+            onClick={save}
+            className="mt-5 h-9 rounded-xl bg-accent text-white text-xs font-bold px-5"
+          >
+            {saved ? (
+              <>
+                <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-300" /> Saved!
+              </>
+            ) : (
+              "Save Profile"
+            )}
           </Button>
         </Card>
 
         {/* Account stats */}
         <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Account Summary</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+            Account Summary
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Projects",       value: projects.length },
+              { label: "Projects", value: projects.length },
               { label: "Active Project", value: activeProject?.name?.slice(0, 10) ?? "None" },
-              { label: "Account ID",     value: user.id.slice(0, 8) + "…" },
-              { label: "Auth",           value: "JWT" },
-            ].map(s => (
-              <div key={s.label} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{s.label}</p>
+              { label: "Account ID", value: user.id.slice(0, 8) + "…" },
+              { label: "Auth", value: "JWT" },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center"
+              >
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  {s.label}
+                </p>
                 <p className="text-sm font-black text-slate-800 mt-0.5 truncate">{s.value}</p>
               </div>
             ))}
@@ -133,10 +176,15 @@ function ProfilePage() {
               <div>
                 <p className="text-xs font-bold text-slate-800">Session Token</p>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {localStorage.getItem("qs_token")?.slice(0, 20) ?? "Not authenticated with backend"}…
+                  {localStorage.getItem("qs_token")?.slice(0, 20) ??
+                    "Not authenticated with backend"}
+                  …
                 </p>
               </div>
-              <Badge variant="outline" className="rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border-emerald-200">
+              <Badge
+                variant="outline"
+                className="rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border-emerald-200"
+              >
                 Active
               </Badge>
             </div>

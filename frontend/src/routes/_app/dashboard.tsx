@@ -5,10 +5,26 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  TrendingUp, Activity, ShieldAlert, CheckCircle2,
-  MoreHorizontal, Plus, Network, Cpu, PlayCircle,
-  ShieldCheck, Upload, Download, AlertTriangle, Bell,
-  Clock, Sparkles, FileText, Pencil, Zap, ArrowRight,
+  TrendingUp,
+  Activity,
+  ShieldAlert,
+  CheckCircle2,
+  MoreHorizontal,
+  Plus,
+  Network,
+  Cpu,
+  PlayCircle,
+  ShieldCheck,
+  Upload,
+  Download,
+  AlertTriangle,
+  Bell,
+  Clock,
+  Sparkles,
+  FileText,
+  Pencil,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDesign } from "@/lib/design-context";
@@ -22,10 +38,10 @@ export const Route = createFileRoute("/_app/dashboard")({
 
 // ----- Status badge color map -----
 const STATUS_BADGE: Record<string, string> = {
-  draft:       "bg-slate-50 text-slate-600 border-slate-200",
+  draft: "bg-slate-50 text-slate-600 border-slate-200",
   in_progress: "bg-blue-50 text-blue-700 border-blue-100",
-  review:      "bg-amber-50 text-amber-700 border-amber-100",
-  completed:   "bg-emerald-50 text-emerald-700 border-emerald-100",
+  review: "bg-amber-50 text-amber-700 border-amber-100",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
 const ACTIVITY = [
@@ -167,15 +183,18 @@ function Donut({
 // StatusBadge helper (kept for simulation table)
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    "Completed": "bg-emerald-50 text-emerald-700 border-emerald-100",
-    "Running":   "bg-blue-50 text-blue-700 border-blue-100",
-    "Queued":    "bg-amber-50 text-amber-700 border-amber-100",
-    "Failed":    "bg-rose-50 text-rose-700 border-rose-100",
+    Completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    Running: "bg-blue-50 text-blue-700 border-blue-100",
+    Queued: "bg-amber-50 text-amber-700 border-amber-100",
+    Failed: "bg-rose-50 text-rose-700 border-rose-100",
     "In Progress": "bg-blue-50 text-blue-700 border-blue-100",
-    "Review":    "bg-amber-50 text-amber-700 border-amber-100",
+    Review: "bg-amber-50 text-amber-700 border-amber-100",
   };
   return (
-    <Badge variant="outline" className={`rounded-full text-[10px] font-bold px-2.5 py-0.5 border ${map[status] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
+    <Badge
+      variant="outline"
+      className={`rounded-full text-[10px] font-bold px-2.5 py-0.5 border ${map[status] || "bg-slate-50 text-slate-600 border-slate-200"}`}
+    >
       {status}
     </Badge>
   );
@@ -191,9 +210,10 @@ function WorkspaceHomePage() {
     fetchHealth().then(setHealth);
   }, []);
 
-  const designSessions = conversations.filter(c => c.result).length;
+  const designSessions = conversations.filter((c) => c.result).length;
   const totalProjects = projects.length || designSessions || 0;
-  const activeProjects = projects.filter(p => p.status === "in_progress").length || designSessions;
+  const activeProjects =
+    projects.filter((p) => p.status === "in_progress").length || designSessions;
 
   const kpis = [
     {
@@ -202,7 +222,16 @@ function WorkspaceHomePage() {
       sub: activeProject ? `Active: ${activeProject.name.slice(0, 18)}` : "No active project",
       icon: TrendingUp,
       color: "#7C3AED",
-      spark: [Math.max(0,totalProjects-4), Math.max(0,totalProjects-3), Math.max(0,totalProjects-2), Math.max(0,totalProjects-1), totalProjects, totalProjects, totalProjects, totalProjects],
+      spark: [
+        Math.max(0, totalProjects - 4),
+        Math.max(0, totalProjects - 3),
+        Math.max(0, totalProjects - 2),
+        Math.max(0, totalProjects - 1),
+        totalProjects,
+        totalProjects,
+        totalProjects,
+        totalProjects,
+      ],
     },
     {
       label: "Design Sessions",
@@ -210,7 +239,7 @@ function WorkspaceHomePage() {
       sub: `${conversations.length} conversations`,
       icon: Activity,
       color: "#10B981",
-      spark: [0, 1, 1, 2, 2, 3, designSessions-1 > 0 ? designSessions-1 : 0, designSessions],
+      spark: [0, 1, 1, 2, 2, 3, designSessions - 1 > 0 ? designSessions - 1 : 0, designSessions],
     },
     {
       label: "Backend Status",
@@ -219,7 +248,7 @@ function WorkspaceHomePage() {
       subColor: health?.status === "online" ? "text-emerald-600" : "text-amber-600",
       icon: ShieldAlert,
       color: health?.status === "online" ? "#10B981" : "#F59E0B",
-      spark: [1,1,1,1,1,1,1,health?.status === "online" ? 1 : 0],
+      spark: [1, 1, 1, 1, 1, 1, 1, health?.status === "online" ? 1 : 0],
     },
     {
       label: "Active Designs",
@@ -227,7 +256,7 @@ function WorkspaceHomePage() {
       sub: "In design sessions",
       icon: CheckCircle2,
       color: "#3B82F6",
-      spark: [0, 0, 1, 1, 2, 2, Math.max(0,activeProjects-1), activeProjects],
+      spark: [0, 0, 1, 1, 2, 2, Math.max(0, activeProjects - 1), activeProjects],
     },
   ];
 
@@ -259,9 +288,7 @@ function WorkspaceHomePage() {
               <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_12px_rgba(15,23,42,0.06)] transition-shadow">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-500">
-                      {k.label}
-                    </div>
+                    <div className="text-[11px] font-semibold text-slate-500">{k.label}</div>
                     <div className="mt-2 text-3xl font-black text-slate-900">{k.value}</div>
                   </div>
                   <div
@@ -288,52 +315,68 @@ function WorkspaceHomePage() {
           <Card className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-slate-900">Recent Projects</h2>
-              <Link to="/projects" className="text-xs font-semibold text-accent hover:underline">View all</Link>
+              <Link to="/projects" className="text-xs font-semibold text-accent hover:underline">
+                View all
+              </Link>
             </div>
             {projects.length === 0 ? (
               <div className="py-6 text-center">
                 <p className="text-xs text-slate-400 font-semibold">No projects yet</p>
-                <Link to="/projects" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline">
+                <Link
+                  to="/projects"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline"
+                >
                   Create a project <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    <th className="pb-2 font-bold">Project</th>
-                    <th className="pb-2 font-bold">Qubits</th>
-                    <th className="pb-2 font-bold">Updated</th>
-                    <th className="pb-2 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.slice(0, 5).map(p => (
-                    <tr key={p.id} className="border-t border-slate-100">
-                      <td className="py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-accent-soft to-white border border-slate-200 flex items-center justify-center shrink-0">
-                            <Cpu className="h-3 w-3 text-accent" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-[12px] truncate max-w-[120px]">{p.name}</div>
-                            <div className="text-[10px] text-slate-400 capitalize">{p.topology.replace("-"," ")} · {p.target_frequency_ghz} GHz</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2.5 text-slate-700 font-semibold">{p.num_qubits || "—"}</td>
-                      <td className="py-2.5 text-slate-500 text-[10px]">{new Date(p.updated_at).toLocaleDateString()}</td>
-                      <td className="py-2.5">
-                        <Badge variant="outline" className={`rounded-full text-[9px] font-bold px-2 py-0.5 border ${STATUS_BADGE[p.status] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                          {p.status.replace("_"," ")}
-                        </Badge>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                      <th className="pb-2 font-bold">Project</th>
+                      <th className="pb-2 font-bold">Qubits</th>
+                      <th className="pb-2 font-bold">Updated</th>
+                      <th className="pb-2 font-bold">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {projects.slice(0, 5).map((p) => (
+                      <tr key={p.id} className="border-t border-slate-100">
+                        <td className="py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-accent-soft to-white border border-slate-200 flex items-center justify-center shrink-0">
+                              <Cpu className="h-3 w-3 text-accent" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 text-[12px] truncate max-w-[120px]">
+                                {p.name}
+                              </div>
+                              <div className="text-[10px] text-slate-400 capitalize">
+                                {p.topology.replace("-", " ")} · {p.target_frequency_ghz} GHz
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2.5 text-slate-700 font-semibold">
+                          {p.num_qubits || "—"}
+                        </td>
+                        <td className="py-2.5 text-slate-500 text-[10px]">
+                          {new Date(p.updated_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-2.5">
+                          <Badge
+                            variant="outline"
+                            className={`rounded-full text-[9px] font-bold px-2 py-0.5 border ${STATUS_BADGE[p.status] || "bg-slate-50 text-slate-600 border-slate-200"}`}
+                          >
+                            {p.status.replace("_", " ")}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Card>
 

@@ -44,17 +44,20 @@ function GitHubSuccessPage() {
       }
 
       try {
-        const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+        const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(
+          /\/$/,
+          "",
+        );
         const userResponse = await fetch(`${backendUrl}/api/auth/me`, {
           headers: { Authorization: `Bearer ${search.token}` },
         });
-        
+
         if (!userResponse.ok) {
           throw new Error("Failed to retrieve user profile from backend.");
         }
-        
+
         const userData = await userResponse.json();
-        
+
         // Complete the login in the Auth context to trigger React state updates
         completeGithubLogin(search.token, {
           id: userData.id,
@@ -64,7 +67,7 @@ function GitHubSuccessPage() {
           organization: userData.organization,
           initials: userData.initials || "?",
         });
-        
+
         toast.success("Signed in with GitHub!");
         navigate({ to: "/dashboard" });
       } catch (err) {
@@ -98,4 +101,3 @@ function GitHubSuccessPage() {
     </div>
   );
 }
-

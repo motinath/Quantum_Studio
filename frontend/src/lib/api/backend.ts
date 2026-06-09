@@ -221,10 +221,14 @@ export async function compileQCLang(
   });
 }
 
-export interface MetalCodeRequest {
-  components: Array<Record<string, unknown>>;
-  connections: Array<Record<string, unknown>>;
-  variables: Record<string, unknown>;
+export interface MetalCodeRequest<
+  TComponent = Record<string, unknown>,
+  TConnection = Record<string, unknown>,
+  TVariables = Record<string, unknown>,
+> {
+  components: TComponent[];
+  connections: TConnection[];
+  variables: TVariables;
 }
 
 export interface MetalCodeResponse {
@@ -234,7 +238,11 @@ export interface MetalCodeResponse {
   component_count: number;
 }
 
-export async function generateMetalCode(payload: MetalCodeRequest): Promise<MetalCodeResponse> {
+export async function generateMetalCode<
+  TComponent = Record<string, unknown>,
+  TConnection = Record<string, unknown>,
+  TVariables = Record<string, unknown>,
+>(payload: MetalCodeRequest<TComponent, TConnection, TVariables>): Promise<MetalCodeResponse> {
   return api<MetalCodeResponse>("/api/generate/metal-code", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -530,7 +538,10 @@ export async function getCurrentUser(token: string): Promise<AuthResponse["user"
 }
 
 export function initiateGithubLogin(): void {
-  const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(/\/$/, "");
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(
+    /\/$/,
+    "",
+  );
   window.location.href = `${backendUrl}/api/auth/github/authorize`;
 }
 
@@ -595,9 +606,7 @@ function _buildClientResult(prompt: string, substrate: string, metal: string): G
     const qName = `Q${i + 1}`;
     const roName = `RO_${qName}`;
     const group = i % 2 === 0;
-    qubitFreqs[qName] = parseFloat(
-      (freq + (group ? -0.1 : 0.1) + ((i * 0.013) % 0.06)).toFixed(4),
-    );
+    qubitFreqs[qName] = parseFloat((freq + (group ? -0.1 : 0.1) + ((i * 0.013) % 0.06)).toFixed(4));
     EJ[qName] = parseFloat((12.8 + ((i * 0.1) % 0.5)).toFixed(3));
     EC[qName] = parseFloat((0.285 + ((i * 0.002) % 0.01)).toFixed(5));
     resFreqs[roName] = parseFloat((qubitFreqs[qName] + 1.5 + ((i * 0.02) % 0.1)).toFixed(4));
@@ -684,7 +693,8 @@ function _buildClientPlacementEdges(numQubits: number, topology: string): Placem
     const r = Math.floor(i / cols);
     const c = i % cols;
     if (c + 1 < cols && i + 1 < numQubits) addEdge(i, i + 1, `bus_h_${i + 1}_${i + 2}`);
-    if (r + 1 < rows && i + cols < numQubits) addEdge(i, i + cols, `bus_v_${i + 1}_${i + cols + 1}`);
+    if (r + 1 < rows && i + cols < numQubits)
+      addEdge(i, i + cols, `bus_v_${i + 1}_${i + cols + 1}`);
   }
   return edges;
 }

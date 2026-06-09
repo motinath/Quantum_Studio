@@ -6,7 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Library, Search, Copy, Check, X, Cpu, Zap, Cable, Radio, Plug, Box, Hexagon, Layers, ExternalLink,
+  Library,
+  Search,
+  Copy,
+  Check,
+  X,
+  Cpu,
+  Zap,
+  Cable,
+  Radio,
+  Plug,
+  Box,
+  Hexagon,
+  Layers,
+  ExternalLink,
 } from "lucide-react";
 import {
   QISKIT_CATALOG,
@@ -81,7 +94,8 @@ function ComponentLibraryPage() {
           <div className="flex-1">
             <h1 className="text-xl font-black tracking-tight text-slate-900">Component Library</h1>
             <p className="text-xs text-slate-500">
-              {QISKIT_CATALOG.length} Qiskit Metal components · sourced from the official QComponent gallery
+              {QISKIT_CATALOG.length} Qiskit Metal components · sourced from the official QComponent
+              gallery
             </p>
           </div>
           <div className="relative w-72">
@@ -99,7 +113,9 @@ function ComponentLibraryPage() {
       <div className="flex flex-1 min-h-0">
         {/* Sidebar rail */}
         <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-3 overflow-y-auto scrollbar-hide">
-          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Categories</p>
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Categories
+          </p>
           <CategoryRailButton
             label="All components"
             count={countsByCat.all}
@@ -169,7 +185,12 @@ function ComponentLibraryPage() {
 }
 
 function CategoryRailButton({
-  label, count, active, onClick, icon: Icon, tint,
+  label,
+  count,
+  active,
+  onClick,
+  icon: Icon,
+  tint,
 }: {
   label: string;
   count: number;
@@ -186,11 +207,16 @@ function CategoryRailButton({
         active ? "bg-accent-soft text-accent" : "text-slate-700 hover:bg-slate-50",
       )}
     >
-      <span className={cn("h-7 w-7 rounded-lg border flex items-center justify-center shrink-0", tint)}>
+      <span
+        className={cn("h-7 w-7 rounded-lg border flex items-center justify-center shrink-0", tint)}
+      >
         <Icon className="h-3.5 w-3.5" />
       </span>
       <span className="flex-1 truncate">{label}</span>
-      <Badge variant="outline" className="rounded-full text-[9px] font-bold px-1.5 py-0 bg-white border-slate-200">
+      <Badge
+        variant="outline"
+        className="rounded-full text-[9px] font-bold px-1.5 py-0 bg-white border-slate-200"
+      >
         {count}
       </Badge>
     </button>
@@ -198,8 +224,14 @@ function CategoryRailButton({
 }
 
 function ComponentTile({
-  c, active, onSelect,
-}: { c: QiskitComponent; active: boolean; onSelect: () => void }) {
+  c,
+  active,
+  onSelect,
+}: {
+  c: QiskitComponent;
+  active: boolean;
+  onSelect: () => void;
+}) {
   const Icon = CAT_ICON[c.category];
   return (
     <motion.button
@@ -223,7 +255,12 @@ function ComponentTile({
       </div>
       <div className="p-3">
         <div className="flex items-start gap-2">
-          <span className={cn("h-6 w-6 shrink-0 rounded-md border flex items-center justify-center", CAT_TINT[c.category])}>
+          <span
+            className={cn(
+              "h-6 w-6 shrink-0 rounded-md border flex items-center justify-center",
+              CAT_TINT[c.category],
+            )}
+          >
             <Icon className="h-3 w-3" />
           </span>
           <div className="min-w-0 flex-1">
@@ -234,7 +271,10 @@ function ComponentTile({
         <p className="text-[11px] text-slate-600 mt-2 line-clamp-2">{c.description}</p>
         <div className="flex flex-wrap gap-1 mt-2">
           {c.tags.slice(0, 3).map((t) => (
-            <span key={t} className="text-[9px] font-mono bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">
+            <span
+              key={t}
+              className="text-[9px] font-mono bg-slate-100 text-slate-600 rounded px-1.5 py-0.5"
+            >
               {t}
             </span>
           ))}
@@ -257,12 +297,19 @@ function DetailPanel({ c, onClose }: { c: QiskitComponent; onClose: () => void }
   return (
     <div className="flex flex-col">
       <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-5 py-3 flex items-center gap-2">
-        <span className={cn("h-7 w-7 rounded-lg border flex items-center justify-center", CAT_TINT[c.category])}>
+        <span
+          className={cn(
+            "h-7 w-7 rounded-lg border flex items-center justify-center",
+            CAT_TINT[c.category],
+          )}
+        >
           <Icon className="h-3.5 w-3.5" />
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-slate-900 truncate">{c.label}</p>
-          <p className="text-[10px] font-mono text-slate-500 truncate">{QISKIT_CATEGORY_LABEL[c.category]}</p>
+          <p className="text-[10px] font-mono text-slate-500 truncate">
+            {QISKIT_CATEGORY_LABEL[c.category]}
+          </p>
         </div>
         <button
           onClick={onClose}
@@ -285,12 +332,16 @@ function DetailPanel({ c, onClose }: { c: QiskitComponent; onClose: () => void }
         </div>
 
         <section>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Description</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Description
+          </p>
           <p className="text-xs text-slate-700 leading-relaxed">{c.description}</p>
         </section>
 
         <section>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Qiskit Metal Class</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Qiskit Metal Class
+          </p>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-xs font-mono font-bold text-slate-900">{c.className}</p>
             <p className="text-[10px] font-mono text-slate-500 mt-0.5 break-all">{c.modulePath}</p>
@@ -304,7 +355,10 @@ function DetailPanel({ c, onClose }: { c: QiskitComponent; onClose: () => void }
             </p>
             <div className="flex flex-wrap gap-1.5">
               {c.pins.map((p) => (
-                <span key={p} className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 rounded px-2 py-0.5 border border-slate-200">
+                <span
+                  key={p}
+                  className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 rounded px-2 py-0.5 border border-slate-200"
+                >
                   {p}
                 </span>
               ))}
@@ -313,7 +367,9 @@ function DetailPanel({ c, onClose }: { c: QiskitComponent; onClose: () => void }
         )}
 
         <section>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Default Parameters</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Default Parameters
+          </p>
           <table className="w-full text-[11px]">
             <tbody>
               {Object.entries(c.defaultParams).map(([k, v]) => (
@@ -328,17 +384,23 @@ function DetailPanel({ c, onClose }: { c: QiskitComponent; onClose: () => void }
 
         <section>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Python snippet</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Python snippet
+            </p>
             <button
               onClick={copy}
               className="h-7 px-2 rounded-lg border border-slate-200 flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-accent hover:border-accent/40 transition-colors"
             >
-              {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+              {copied ? (
+                <Check className="h-3 w-3 text-emerald-500" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
           <pre className="text-[10px] bg-slate-900 text-slate-200 rounded-xl p-3 overflow-x-auto font-mono leading-relaxed whitespace-pre">
-{snippet}
+            {snippet}
           </pre>
         </section>
 

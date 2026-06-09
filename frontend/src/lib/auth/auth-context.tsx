@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { loginUser, registerUser, getCurrentUser, loginWithGoogle, initiateGithubLogin } from "@/lib/api/backend";
+import {
+  loginUser,
+  registerUser,
+  getCurrentUser,
+  loginWithGoogle,
+  initiateGithubLogin,
+} from "@/lib/api/backend";
 import { toast } from "sonner";
 
 export type UserRole = "admin" | "org_manager" | "engineer";
@@ -290,7 +296,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, hydrated, isLoading, signIn, signUp, signOut, signInWithGoogle, signInWithGitHub, completeGithubLogin }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        hydrated,
+        isLoading,
+        signIn,
+        signUp,
+        signOut,
+        signInWithGoogle,
+        signInWithGitHub,
+        completeGithubLogin,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

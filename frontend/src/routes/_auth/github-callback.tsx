@@ -1,9 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/_auth/github-callback')({
+export const Route = createFileRoute("/_auth/github-callback")({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  return <div>Hello "/_auth/github-callback"!</div>
+  return <div>Hello "/_auth/github-callback"!</div>;
 }

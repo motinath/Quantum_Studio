@@ -847,9 +847,7 @@ function InteractiveCADCanvas({
 
   const qubits = result.placement?.qubits ?? [];
   const placementEdges = result.placement?.edges ?? [];
-  const resonatorEntries = Object.entries(
-    result.frequency_plan?.resonator_frequencies_GHz ?? {},
-  );
+  const resonatorEntries = Object.entries(result.frequency_plan?.resonator_frequencies_GHz ?? {});
 
   const coords = useMemo(() => {
     if (qubits.length === 0) return { minX: 0, maxX: 1, minY: 0, maxY: 1, rangeX: 1, rangeY: 1 };
@@ -1003,10 +1001,7 @@ function InteractiveCADCanvas({
           (edge.qubit_b === selectedQubit.name && edge.qubit_a === name),
       );
 
-    const drawMeanderPath = (
-      p1: { px: number; py: number },
-      p2: { px: number; py: number },
-    ) => {
+    const drawMeanderPath = (p1: { px: number; py: number }, p2: { px: number; py: number }) => {
       ctx.beginPath();
       ctx.moveTo(p1.px, p1.py);
       const midX = (p1.px + p2.px) / 2;

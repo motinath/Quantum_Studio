@@ -118,10 +118,7 @@ export function AppSidebar() {
               <LogoMark className="[&_img]:!h-5 [&_img]:brightness-0 [&_img]:invert" />
             </span>
           ) : (
-            <SilicofellerLogo
-              className="brightness-0 invert scale-[1.2] "
-              iconClassName="h-16"
-            />
+            <SilicofellerLogo className="brightness-0 invert scale-[1.2] " iconClassName="h-16" />
           )}
         </Link>
       </SidebarHeader>

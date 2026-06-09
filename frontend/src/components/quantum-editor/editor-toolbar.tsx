@@ -76,11 +76,13 @@ export function EditorToolbar({ state, dispatch, circuitName, conversationId }: 
       const result = await generateMetalCode({
         components: state.components,
         connections: state.connections,
-        variables: state.variables as unknown as Record<string, unknown>,
+        variables: state.variables,
       });
       download(`${circuitName || "circuit"}_metal.py`, result.code, "text/x-python");
       if (result.warnings.length > 0) {
-        toast.warning(`Generated with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}`);
+        toast.warning(
+          `Generated with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}`,
+        );
       } else {
         toast.success("Qiskit Metal code generated");
       }
@@ -171,7 +173,8 @@ export function EditorToolbar({ state, dispatch, circuitName, conversationId }: 
             disabled={isGeneratingCode || state.components.length === 0}
             className="h-8 gap-1.5 rounded-lg text-xs"
           >
-            <FileCode2 className="h-3.5 w-3.5" /> {isGeneratingCode ? "Generating" : "Generate Code"}
+            <FileCode2 className="h-3.5 w-3.5" />{" "}
+            {isGeneratingCode ? "Generating" : "Generate Code"}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

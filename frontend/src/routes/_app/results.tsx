@@ -5,8 +5,18 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  BarChart3, Download, TrendingUp, Activity, Zap, Thermometer,
-  ChevronDown, ChevronUp, Copy, Check, Clock, Cpu,
+  BarChart3,
+  Download,
+  TrendingUp,
+  Activity,
+  Zap,
+  Thermometer,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+  Clock,
+  Cpu,
 } from "lucide-react";
 import { useDesign } from "@/lib/design-context";
 import { cn } from "@/lib/utils";
@@ -26,14 +36,22 @@ function SparkBar({ values, color = "#7C3AED" }: { values: number[]; color?: str
         <div
           key={i}
           className="rounded-sm flex-1"
-          style={{ height: `${(v / max) * 100}%`, background: color, opacity: 0.7 + (i / values.length) * 0.3 }}
+          style={{
+            height: `${(v / max) * 100}%`,
+            background: color,
+            opacity: 0.7 + (i / values.length) * 0.3,
+          }}
         />
       ))}
     </div>
   );
 }
 
-function FrequencyTable({ fp }: { fp: NonNullable<import("@/lib/api/backend").FrequencyPlan> | undefined }) {
+function FrequencyTable({
+  fp,
+}: {
+  fp: NonNullable<import("@/lib/api/backend").FrequencyPlan> | undefined;
+}) {
   if (!fp) return null;
   const qEntries = Object.entries(fp.qubit_frequencies_GHz ?? {});
   const rEntries = Object.entries(fp.resonator_frequencies_GHz ?? {});
@@ -48,7 +66,10 @@ function FrequencyTable({ fp }: { fp: NonNullable<import("@/lib/api/backend").Fr
           </p>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {qEntries.map(([name, freq]) => (
-              <div key={name} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors">
+              <div
+                key={name}
+                className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-800 w-8">{name}</span>
                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 rounded px-1.5">
@@ -56,7 +77,9 @@ function FrequencyTable({ fp }: { fp: NonNullable<import("@/lib/api/backend").Fr
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-black text-slate-900 font-mono">{(freq as number).toFixed(4)}</span>
+                  <span className="text-xs font-black text-slate-900 font-mono">
+                    {(freq as number).toFixed(4)}
+                  </span>
                   <span className="text-[10px] text-slate-400 ml-1">GHz</span>
                 </div>
               </div>
@@ -77,7 +100,10 @@ function FrequencyTable({ fp }: { fp: NonNullable<import("@/lib/api/backend").Fr
           </p>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {rEntries.map(([name, freq]) => (
-              <div key={name} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors">
+              <div
+                key={name}
+                className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-800 w-8">{name}</span>
                   <span className="text-[10px] font-mono text-slate-400">
@@ -85,7 +111,9 @@ function FrequencyTable({ fp }: { fp: NonNullable<import("@/lib/api/backend").Fr
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-black text-accent font-mono">{(freq as number).toFixed(4)}</span>
+                  <span className="text-xs font-black text-accent font-mono">
+                    {(freq as number).toFixed(4)}
+                  </span>
                   <span className="text-[10px] text-slate-400 ml-1">GHz</span>
                 </div>
               </div>
@@ -103,9 +131,13 @@ function FrequencyTable({ fp }: { fp: NonNullable<import("@/lib/api/backend").Fr
       {/* Warnings */}
       {(fp.warnings?.length ?? 0) > 0 && (
         <Card className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 shadow-sm">
-          <p className="text-xs font-bold text-amber-800 mb-2">Frequency Warnings ({(fp.warnings ?? []).length})</p>
+          <p className="text-xs font-bold text-amber-800 mb-2">
+            Frequency Warnings ({(fp.warnings ?? []).length})
+          </p>
           {(fp.warnings ?? []).map((w: string, i: number) => (
-            <p key={i} className="text-[11px] text-amber-700 font-medium">• {w}</p>
+            <p key={i} className="text-[11px] text-amber-700 font-medium">
+              • {w}
+            </p>
           ))}
         </Card>
       )}
@@ -121,7 +153,9 @@ function ParametersTable({ fp }: { fp: any }) {
     <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
       <div className="p-4 border-b border-slate-100">
         <p className="text-xs font-bold text-slate-900">Hamiltonian Parameters</p>
-        <p className="text-[10px] text-slate-500 mt-0.5">EJ (Josephson energy) · EC (charging energy) · EJ/EC ratio</p>
+        <p className="text-[10px] text-slate-500 mt-0.5">
+          EJ (Josephson energy) · EC (charging energy) · EJ/EC ratio
+        </p>
       </div>
       <table className="w-full text-xs">
         <thead>
@@ -143,10 +177,14 @@ function ParametersTable({ fp }: { fp: any }) {
             return (
               <tr key={name} className="border-b border-slate-50 hover:bg-slate-50">
                 <td className="px-4 py-2.5 font-bold text-slate-900">{name}</td>
-                <td className="px-4 py-2.5 font-mono text-slate-700">{(freq as number).toFixed(4)}</td>
+                <td className="px-4 py-2.5 font-mono text-slate-700">
+                  {(freq as number).toFixed(4)}
+                </td>
                 <td className="px-4 py-2.5 font-mono text-amber-700">{ej.toFixed(3)}</td>
                 <td className="px-4 py-2.5 font-mono text-blue-700">{ec.toFixed(5)}</td>
-                <td className="px-4 py-2.5 font-mono text-emerald-700">{ec > 0 ? (ej / ec).toFixed(1) : "—"}</td>
+                <td className="px-4 py-2.5 font-mono text-emerald-700">
+                  {ec > 0 ? (ej / ec).toFixed(1) : "—"}
+                </td>
                 <td className="px-4 py-2.5 font-mono text-slate-500">{det.toFixed(3)} GHz</td>
               </tr>
             );
@@ -164,12 +202,17 @@ function PlacementTable({ placement }: { placement: any }) {
       <div className="p-4 border-b border-slate-100 flex items-center justify-between">
         <div>
           <p className="text-xs font-bold text-slate-900">Physical Placement</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Solver: {placement.solver} · Coordinates in mm</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">
+            Solver: {placement.solver} · Coordinates in mm
+          </p>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 p-4">
         {placement.qubits?.map((q: any) => (
-          <div key={q.name} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center hover:bg-white transition-colors">
+          <div
+            key={q.name}
+            className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center hover:bg-white transition-colors"
+          >
             <p className="text-xs font-bold text-slate-800">{q.name}</p>
             <p className="text-[10px] font-mono text-slate-500 mt-1">
               ({q.x.toFixed(3)}, {q.y.toFixed(3)})
@@ -188,13 +231,13 @@ function ResultsPage() {
   const [copied, setCopied] = useState(false);
 
   const displayConv = selectedConvId
-    ? conversations.find(c => c.id === selectedConvId)
+    ? conversations.find((c) => c.id === selectedConvId)
     : activeConversation;
 
   const result = displayConv?.result;
-  const fp     = result?.frequency_plan;
+  const fp = result?.frequency_plan;
 
-  const withResults = conversations.filter(c => c.result);
+  const withResults = conversations.filter((c) => c.result);
 
   const exportJSON = () => {
     if (!result) return;
@@ -212,11 +255,15 @@ function ResultsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const TABS: { id: ResultTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  const TABS: {
+    id: ResultTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }[] = [
     { id: "frequencies", label: "Frequencies", icon: Activity },
-    { id: "parameters",  label: "Hamiltonian",  icon: Zap },
-    { id: "coherence",   label: "Coherence",    icon: Thermometer },
-    { id: "placement",   label: "Placement",    icon: BarChart3 },
+    { id: "parameters", label: "Hamiltonian", icon: Zap },
+    { id: "coherence", label: "Coherence", icon: Thermometer },
+    { id: "placement", label: "Placement", icon: BarChart3 },
   ];
 
   return (
@@ -230,16 +277,29 @@ function ResultsPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-900">Results</h1>
-                <p className="text-sm text-slate-500">Simulation outputs · Extracted parameters · Frequency plans</p>
+                <p className="text-sm text-slate-500">
+                  Simulation outputs · Extracted parameters · Frequency plans
+                </p>
               </div>
             </div>
             {result && (
               <div className="flex gap-2">
-                <Button onClick={copyJSON} variant="outline" className="rounded-xl text-xs font-bold h-9">
-                  {copied ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                <Button
+                  onClick={copyJSON}
+                  variant="outline"
+                  className="rounded-xl text-xs font-bold h-9"
+                >
+                  {copied ? (
+                    <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="mr-1.5 h-3.5 w-3.5" />
+                  )}
                   Copy JSON
                 </Button>
-                <Button onClick={exportJSON} className="rounded-xl bg-accent text-white text-xs font-bold h-9">
+                <Button
+                  onClick={exportJSON}
+                  className="rounded-xl bg-accent text-white text-xs font-bold h-9"
+                >
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Export
                 </Button>
               </div>
@@ -251,7 +311,9 @@ function ResultsPage() {
           <Card className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
             <BarChart3 className="h-10 w-10 text-slate-300 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-700">No results yet</p>
-            <p className="text-xs text-slate-400 mt-1">Generate a chip in the Designer to see results here.</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Generate a chip in the Designer to see results here.
+            </p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -260,15 +322,15 @@ function ResultsPage() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">
                 Design Sessions ({withResults.length})
               </p>
-              {withResults.map(c => (
+              {withResults.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setSelectedConvId(c.id)}
                   className={cn(
                     "w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
-                    (selectedConvId === c.id || (!selectedConvId && c.id === activeConversation?.id))
+                    selectedConvId === c.id || (!selectedConvId && c.id === activeConversation?.id)
                       ? "border-accent bg-accent-soft shadow-sm"
-                      : "border-slate-200 bg-white hover:border-accent/40 hover:bg-slate-50"
+                      : "border-slate-200 bg-white hover:border-accent/40 hover:bg-slate-50",
                   )}
                 >
                   <Cpu className="h-4 w-4 text-accent shrink-0 mt-0.5" />
@@ -296,18 +358,36 @@ function ResultsPage() {
                   <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Result Set</p>
-                        <h3 className="text-base font-black text-slate-900 mt-0.5">{result.label}</h3>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          Result Set
+                        </p>
+                        <h3 className="text-base font-black text-slate-900 mt-0.5">
+                          {result.label}
+                        </h3>
                         <p className="text-xs text-slate-500 mt-0.5">{result.interpretation}</p>
                       </div>
                       <div className="flex gap-2 flex-wrap justify-end">
-                        <Badge variant="outline" className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-slate-50">
+                        <Badge
+                          variant="outline"
+                          className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-slate-50"
+                        >
                           {result.num_qubits} qubits
                         </Badge>
-                        <Badge variant="outline" className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-slate-50">
+                        <Badge
+                          variant="outline"
+                          className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-slate-50"
+                        >
                           {result.topology}
                         </Badge>
-                        <Badge variant="outline" className={cn("rounded-full text-[9px] font-bold px-2 py-0.5", result.drc?.passed ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200")}>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "rounded-full text-[9px] font-bold px-2 py-0.5",
+                            result.drc?.passed
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200",
+                          )}
+                        >
                           DRC {result.drc?.passed ? "PASS" : "FAIL"}
                         </Badge>
                       </div>
@@ -316,7 +396,7 @@ function ResultsPage() {
 
                   {/* Tabs */}
                   <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
-                    {TABS.map(t => (
+                    {TABS.map((t) => (
                       <button
                         key={t.id}
                         onClick={() => setActiveTab(t.id)}
@@ -324,7 +404,7 @@ function ResultsPage() {
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                           activeTab === t.id
                             ? "bg-white text-accent shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
+                            : "text-slate-500 hover:text-slate-700",
                         )}
                       >
                         <t.icon className="h-3 w-3" />
@@ -334,21 +414,56 @@ function ResultsPage() {
                   </div>
 
                   {/* Tab content */}
-                  {activeTab === "frequencies"  && <FrequencyTable fp={fp} />}
-                  {activeTab === "parameters"   && <ParametersTable fp={fp} />}
-                  {activeTab === "placement"    && <PlacementTable placement={result.placement} />}
+                  {activeTab === "frequencies" && <FrequencyTable fp={fp} />}
+                  {activeTab === "parameters" && <ParametersTable fp={fp} />}
+                  {activeTab === "placement" && <PlacementTable placement={result.placement} />}
                   {activeTab === "coherence" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {[
-                        { label: "T₁ Estimate", value: fp?.substrate === "sapphire" ? "~250 µs" : "~80 µs", sub: fp?.substrate ?? "silicon", color: "text-emerald-600" },
-                        { label: "T₂ Estimate", value: fp?.substrate === "sapphire" ? "~350 µs" : "~120 µs", sub: fp?.metal ?? "aluminum", color: "text-blue-600" },
-                        { label: "1Q Gate Fidelity", value: "99.92%", sub: "Estimated", color: "text-accent" },
-                        { label: "2Q Gate Fidelity", value: "99.4%", sub: "Estimated", color: "text-amber-600" },
-                        { label: "Anharmonicity", value: `~${Math.round((fp?.EC_GHz ? Object.values(fp.EC_GHz)[0] as number : 0.28) * 1000)} MHz`, sub: "-EC", color: "text-slate-700" },
-                        { label: "ε_eff", value: fp?.epsilon_eff?.toFixed(3) ?? "6.270", sub: "Effective dielectric", color: "text-slate-700" },
-                      ].map(s => (
-                        <Card key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{s.label}</p>
+                        {
+                          label: "T₁ Estimate",
+                          value: fp?.substrate === "sapphire" ? "~250 µs" : "~80 µs",
+                          sub: fp?.substrate ?? "silicon",
+                          color: "text-emerald-600",
+                        },
+                        {
+                          label: "T₂ Estimate",
+                          value: fp?.substrate === "sapphire" ? "~350 µs" : "~120 µs",
+                          sub: fp?.metal ?? "aluminum",
+                          color: "text-blue-600",
+                        },
+                        {
+                          label: "1Q Gate Fidelity",
+                          value: "99.92%",
+                          sub: "Estimated",
+                          color: "text-accent",
+                        },
+                        {
+                          label: "2Q Gate Fidelity",
+                          value: "99.4%",
+                          sub: "Estimated",
+                          color: "text-amber-600",
+                        },
+                        {
+                          label: "Anharmonicity",
+                          value: `~${Math.round((fp?.EC_GHz ? (Object.values(fp.EC_GHz)[0] as number) : 0.28) * 1000)} MHz`,
+                          sub: "-EC",
+                          color: "text-slate-700",
+                        },
+                        {
+                          label: "ε_eff",
+                          value: fp?.epsilon_eff?.toFixed(3) ?? "6.270",
+                          sub: "Effective dielectric",
+                          color: "text-slate-700",
+                        },
+                      ].map((s) => (
+                        <Card
+                          key={s.label}
+                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            {s.label}
+                          </p>
                           <p className={`text-2xl font-black mt-1 ${s.color}`}>{s.value}</p>
                           <p className="text-[10px] text-slate-400 mt-0.5">{s.sub}</p>
                         </Card>

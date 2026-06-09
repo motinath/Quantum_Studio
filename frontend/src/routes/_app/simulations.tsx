@@ -5,8 +5,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  PlayCircle, CheckCircle2, XCircle, Clock, Loader2,
-  Atom, Zap, Activity, AlertTriangle, BarChart3, Cpu,
+  PlayCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Loader2,
+  Atom,
+  Zap,
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  Cpu,
 } from "lucide-react";
 import { useDesign } from "@/lib/design-context";
 import { useProject } from "@/lib/project-context";
@@ -30,10 +39,18 @@ type SimRun = {
 };
 
 const SOLVERS = [
-  { id: "eigenmode",    label: "Eigenmode",    desc: "Resonant frequencies & Q-factors of cavity modes" },
-  { id: "driven_modal", label: "Driven Modal", desc: "S-parameter & transmission spectrum analysis" },
-  { id: "physics",      label: "Physics (scqubits)", desc: "Transmon T₁/T₂, anharmonicity, coupling — analytical" },
-  { id: "transient",    label: "Transient",    desc: "Time-domain field evolution" },
+  { id: "eigenmode", label: "Eigenmode", desc: "Resonant frequencies & Q-factors of cavity modes" },
+  {
+    id: "driven_modal",
+    label: "Driven Modal",
+    desc: "S-parameter & transmission spectrum analysis",
+  },
+  {
+    id: "physics",
+    label: "Physics (scqubits)",
+    desc: "Transmon T₁/T₂, anharmonicity, coupling — analytical",
+  },
+  { id: "transient", label: "Transient", desc: "Time-domain field evolution" },
 ];
 
 async function callPhysics(payload: unknown): Promise<Record<string, unknown>> {
@@ -67,14 +84,16 @@ function buildOfflineResults(solver: string, payload: any): Record<string, unkno
   }
   if (solver === "driven_modal") {
     return {
-      S21_dB: freqs.slice(0, 6).map((f, i) => ({ freq_GHz: f.toFixed(4), S21_dB: (-40 + i * 2).toFixed(1) })),
+      S21_dB: freqs
+        .slice(0, 6)
+        .map((f, i) => ({ freq_GHz: f.toFixed(4), S21_dB: (-40 + i * 2).toFixed(1) })),
       bandwidth_MHz: 0.3,
     };
   }
   if (solver === "transient") {
     return {
       final_time_ns: 100,
-      energy_decay_rate_MHz: (1 / T1 * 1000).toFixed(3),
+      energy_decay_rate_MHz: ((1 / T1) * 1000).toFixed(3),
       decoherence_time_ns: (T1 * 1000).toFixed(0),
     };
   }
@@ -110,7 +129,7 @@ function SimulationsPage() {
       solver: selectedSolver,
       status: "running",
     };
-    setRuns(prev => [newRun, ...prev]);
+    setRuns((prev) => [newRun, ...prev]);
     const t0 = Date.now();
 
     try {
@@ -120,18 +139,18 @@ function SimulationsPage() {
         results = await callPhysics(activeConversation!.result);
       } catch {
         // Offline fallback
-        await new Promise(r => setTimeout(r, 900));
+        await new Promise((r) => setTimeout(r, 900));
         results = buildOfflineResults(selectedSolver, activeConversation!.result);
       }
 
       const runtime = `${((Date.now() - t0) / 1000).toFixed(2)}s`;
-      setRuns(prev => prev.map(r =>
-        r.id === id ? { ...r, status: "completed", runtime, results } : r
-      ));
+      setRuns((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "completed", runtime, results } : r)),
+      );
     } catch (e) {
-      setRuns(prev => prev.map(r =>
-        r.id === id ? { ...r, status: "failed", error: String(e) } : r
-      ));
+      setRuns((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "failed", error: String(e) } : r)),
+      );
     } finally {
       setRunning(false);
     }
@@ -148,7 +167,9 @@ function SimulationsPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-900">Simulations</h1>
-                <p className="text-sm text-slate-500">Eigenmode · Driven Modal · Physics · Transient</p>
+                <p className="text-sm text-slate-500">
+                  Eigenmode · Driven Modal · Physics · Transient
+                </p>
               </div>
             </div>
           </div>
@@ -165,10 +186,13 @@ function SimulationsPage() {
                     <Cpu className="h-4 w-4 text-accent" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{activeConversation!.title}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate">
+                      {activeConversation!.title}
+                    </p>
                     <p className="text-[10px] text-slate-400">
-                      {activeConversation!.result!.num_qubits}Q · {activeConversation!.result!.topology}
-                      {activeProject && <> · {activeProject.name.slice(0,12)}</>}
+                      {activeConversation!.result!.num_qubits}Q ·{" "}
+                      {activeConversation!.result!.topology}
+                      {activeProject && <> · {activeProject.name.slice(0, 12)}</>}
                     </p>
                   </div>
                 </div>
@@ -177,14 +201,17 @@ function SimulationsPage() {
                   <p className="text-xs text-amber-600 font-semibold flex items-center gap-1.5">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     No active design — open the{" "}
-                    <Link to="/designer" className="underline">Designer</Link> first
+                    <Link to="/designer" className="underline">
+                      Designer
+                    </Link>{" "}
+                    first
                   </p>
                 </div>
               )}
 
               <p className="text-xs font-bold text-slate-700 mb-3">Select Solver</p>
               <div className="space-y-2">
-                {SOLVERS.map(s => (
+                {SOLVERS.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => setSelectedSolver(s.id)}
@@ -192,12 +219,24 @@ function SimulationsPage() {
                       "w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
                       selectedSolver === s.id
                         ? "border-accent bg-accent-soft shadow-sm"
-                        : "border-slate-200 bg-white hover:border-accent/40 hover:bg-slate-50"
+                        : "border-slate-200 bg-white hover:border-accent/40 hover:bg-slate-50",
                     )}
                   >
-                    <Atom className={cn("h-4 w-4 shrink-0 mt-0.5", selectedSolver === s.id ? "text-accent" : "text-slate-400")} />
+                    <Atom
+                      className={cn(
+                        "h-4 w-4 shrink-0 mt-0.5",
+                        selectedSolver === s.id ? "text-accent" : "text-slate-400",
+                      )}
+                    />
                     <div>
-                      <p className={cn("text-xs font-bold", selectedSolver === s.id ? "text-accent" : "text-slate-700")}>{s.label}</p>
+                      <p
+                        className={cn(
+                          "text-xs font-bold",
+                          selectedSolver === s.id ? "text-accent" : "text-slate-700",
+                        )}
+                      >
+                        {s.label}
+                      </p>
                       <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">{s.desc}</p>
                     </div>
                   </button>
@@ -209,20 +248,28 @@ function SimulationsPage() {
                 disabled={!hasDesign || running}
                 className="w-full mt-4 rounded-xl bg-accent text-white text-xs font-bold h-9"
               >
-                {running
-                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  : <PlayCircle className="mr-1.5 h-3.5 w-3.5" />}
+                {running ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
+                )}
                 Run Simulation
               </Button>
             </Card>
 
             {/* Info card */}
             <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">About</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                About
+              </p>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Physics solver runs analytical transmon Hamiltonian equations. For full FEM 
-                (Palace/HFSS), deploy the backend on a compute cluster and configure the 
-                integration on the <Link to="/integrations" className="text-accent hover:underline">Integrations</Link> page.
+                Physics solver runs analytical transmon Hamiltonian equations. For full FEM
+                (Palace/HFSS), deploy the backend on a compute cluster and configure the integration
+                on the{" "}
+                <Link to="/integrations" className="text-accent hover:underline">
+                  Integrations
+                </Link>{" "}
+                page.
               </p>
             </Card>
           </div>
@@ -233,29 +280,44 @@ function SimulationsPage() {
               <Card className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
                 <Activity className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                 <p className="text-sm font-bold text-slate-700">No simulations yet</p>
-                <p className="text-xs text-slate-400 mt-1">Select a solver and click Run Simulation.</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Select a solver and click Run Simulation.
+                </p>
               </Card>
             ) : (
               runs.map((r, i) => (
-                <motion.div key={r.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                >
                   <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="text-sm font-bold text-slate-900">{r.name}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-slate-50 border-slate-200">
+                          <Badge
+                            variant="outline"
+                            className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-slate-50 border-slate-200"
+                          >
                             {r.solver}
                           </Badge>
                           {r.runtime && (
                             <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                              <Clock className="h-2.5 w-2.5" />{r.runtime}
+                              <Clock className="h-2.5 w-2.5" />
+                              {r.runtime}
                             </span>
                           )}
                         </div>
                       </div>
-                      {r.status === "running"   && <Loader2 className="h-4 w-4 animate-spin text-accent" />}
-                      {r.status === "completed" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                      {r.status === "failed"    && <XCircle className="h-4 w-4 text-rose-500" />}
+                      {r.status === "running" && (
+                        <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                      )}
+                      {r.status === "completed" && (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      )}
+                      {r.status === "failed" && <XCircle className="h-4 w-4 text-rose-500" />}
                     </div>
 
                     {r.status === "running" && (
@@ -271,8 +333,13 @@ function SimulationsPage() {
                             .filter(([, v]) => typeof v === "number" || typeof v === "string")
                             .slice(0, 6)
                             .map(([k, v]) => (
-                              <div key={k} className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 text-center">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide truncate">{k.replace(/_/g, " ")}</p>
+                              <div
+                                key={k}
+                                className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 text-center"
+                              >
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide truncate">
+                                  {k.replace(/_/g, " ")}
+                                </p>
                                 <p className="text-xs font-black text-slate-800 mt-0.5 font-mono">
                                   {typeof v === "number" ? v.toFixed(2) : String(v)}
                                 </p>
@@ -281,26 +348,34 @@ function SimulationsPage() {
                         </div>
 
                         {/* Show nested arrays nicely */}
-                        {Object.entries(r.results).filter(([, v]) => Array.isArray(v)).map(([k, v]) => (
-                          <div key={k} className="mt-3">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{k.replace(/_/g, " ")}</p>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-[10px]">
-                                <tbody>
-                                  {(v as Record<string, unknown>[]).slice(0, 5).map((row, i) => (
-                                    <tr key={i} className="border-b border-slate-50">
-                                      {Object.entries(row).map(([col, val]) => (
-                                        <td key={col} className="py-1 pr-3 font-mono text-slate-600">
-                                          <span className="text-slate-400 mr-1">{col}:</span>{String(val)}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                        {Object.entries(r.results)
+                          .filter(([, v]) => Array.isArray(v))
+                          .map(([k, v]) => (
+                            <div key={k} className="mt-3">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                {k.replace(/_/g, " ")}
+                              </p>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-[10px]">
+                                  <tbody>
+                                    {(v as Record<string, unknown>[]).slice(0, 5).map((row, i) => (
+                                      <tr key={i} className="border-b border-slate-50">
+                                        {Object.entries(row).map(([col, val]) => (
+                                          <td
+                                            key={col}
+                                            className="py-1 pr-3 font-mono text-slate-600"
+                                          >
+                                            <span className="text-slate-400 mr-1">{col}:</span>
+                                            {String(val)}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     )}
 

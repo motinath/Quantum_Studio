@@ -72,15 +72,28 @@ function BlogPage() {
           </Link>
           <div className="flex items-center gap-3">
             {user ? (
-              <Button asChild size="sm" className="rounded-full bg-white text-black hover:bg-white/90">
+              <Button
+                asChild
+                size="sm"
+                className="rounded-full bg-white text-black hover:bg-white/90"
+              >
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
             ) : (
               <>
-                <Button asChild variant="ghost" size="sm" className="text-white/70 hover:text-white">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/70 hover:text-white"
+                >
                   <Link to="/sign-in">Sign in</Link>
                 </Button>
-                <Button asChild size="sm" className="rounded-full bg-white text-black hover:bg-white/90">
+                <Button
+                  asChild
+                  size="sm"
+                  className="rounded-full bg-white text-black hover:bg-white/90"
+                >
                   <Link to="/sign-up">Get started</Link>
                 </Button>
               </>
@@ -98,9 +111,7 @@ function BlogPage() {
           <ArrowLeft className="h-3.5 w-3.5" /> Back to home
         </Link>
 
-        <h1 className="mt-8 text-4xl font-semibold tracking-tight">
-          From the SilicoFeller blog.
-        </h1>
+        <h1 className="mt-8 text-4xl font-semibold tracking-tight">From the SilicoFeller blog.</h1>
         <p className="mt-3 text-white/60">
           Research, engineering, and industry insights from our team.
         </p>
