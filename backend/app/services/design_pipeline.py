@@ -97,10 +97,11 @@ async def run_design_pipeline(constraints: "DesignConstraints") -> dict[str, Any
         for qs in freq_plan_obj.qubits:
             if graph.has_node(qs.name):
                 q = graph.get_node(qs.name)
-                q.frequency_ghz   = qs.freq_GHz
-                q.group           = qs.group
-                q.ej_ghz          = qs.EJ_GHz
-                q.ec_ghz          = qs.EC_GHz
+                q.frequency_ghz     = qs.freq_GHz
+                q.group             = qs.group
+                q.ej_ghz            = qs.EJ_GHz
+                q.ec_ghz            = qs.EC_GHz
+                q.anharmonicity_ghz = qs.anharmonicity_GHz
         for rs in freq_plan_obj.resonators:
             if graph.has_node(rs.name):
                 r = graph.get_node(rs.name)
@@ -240,7 +241,7 @@ async def run_design_from_prompt(
     except Exception as exc:
         log.warning("V2 pipeline failed (%s), falling back to V1", exc)
         from app.services.chip_generator import generate_chip
-        return await generate_chip(prompt, substrate, metal)
+        return generate_chip(prompt, substrate, metal)
 
 
 async def run_design_from_graph_json(
@@ -295,8 +296,10 @@ def _build_qiskit_metal_code(graph, placement_dict: dict, metal: str) -> str:
     qubits = [
         QubitNode(
             name       = q.id,
-            qubit_type = q.qubit_type.value if hasattr(q.qubit_type, "value") else "transmon",
-            attributes = [Attribute("frequency", round(q.frequency_ghz, 4))],
+            attributes = [
+                Attribute("type", q.qubit_type.value if hasattr(q.qubit_type, "value") else "transmon"),
+                Attribute("frequency", round(q.frequency_ghz, 4)),
+            ],
         )
         for q in graph.qubits
     ]

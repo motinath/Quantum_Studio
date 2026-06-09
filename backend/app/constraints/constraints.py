@@ -121,8 +121,9 @@ class DesignConstraints:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "DesignConstraints":
-        fab_d  = d.pop("fab",  {})
-        freq_d = d.pop("freq", {})
+        d = dict(d)  # shallow copy to avoid mutating caller's dict
+        fab_d  = d.get("fab",  {})
+        freq_d = d.get("freq", {})
         # map chip_size_mm shorthand
         if "chip_size_mm" in d and "chip_width_mm" not in d:
             d["chip_width_mm"]  = float(d["chip_size_mm"])

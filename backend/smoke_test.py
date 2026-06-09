@@ -73,9 +73,8 @@ except Exception as e:
 
 # Test 7: chip_generator.generate_chip (async)
 try:
-    import asyncio
     from app.services.chip_generator import generate_chip
-    result = asyncio.run(generate_chip("design a 5 qubit grid chip on silicon"))
+    result = generate_chip("design a 5 qubit grid chip on silicon")
     ok(f"chip_generator.generate_chip: label={result['label']}, engine={result['engine']}, drc_passed={result['drc'].get('passed')}")
 except Exception as e:
     fail("chip_generator.generate_chip", e)

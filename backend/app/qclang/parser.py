@@ -109,12 +109,7 @@ class Parser:
         self._expect(TT.QUBIT)
         name = self._expect(TT.IDENT).value
         attrs = self._parse_attributes()
-        # derive type from attributes
-        qubit_type = "transmon"
-        for a in attrs:
-            if a.key == "type":
-                qubit_type = str(a.value)
-        return QubitNode(name=name, qubit_type=qubit_type, attributes=attrs)
+        return QubitNode(name=name, attributes=attrs)
 
     # ── parse coupler statement ───────────────────────────────────────────
 

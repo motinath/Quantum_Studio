@@ -188,7 +188,19 @@ def run_drc_from_payload(payload: dict[str, Any]) -> DRCReport:
     coupler_pairs_c = [
         (e.get("qubit_a", ""), e.get("qubit_b", "")) for e in edges
     ]
-    resonator_map_c = {r: r.replace("RO_", "") for r in rfreqs}
+    # Map resonator names to target qubit IDs using a robust strategy
+    def _extract_qubit_id(res_name: str) -> str:
+        """Extract qubit ID from resonator name, handling various conventions."""
+        # Try common patterns: RO_Q1, Readout_Q1, res_Q1, R_Q1, etc.
+        for prefix in ("RO_", "Readout_", "res_", "R_", "ro_", "readout_"):
+            if res_name.startswith(prefix):
+                return res_name[len(prefix):]
+        # If no prefix matched, assume the last underscore-separated part is the qubit ID
+        if "_" in res_name:
+            return res_name.rsplit("_", 1)[-1]
+        return res_name
+
+    resonator_map_c = {r: _extract_qubit_id(r) for r in rfreqs}
     condrc = ConnectivityDRC(
         qubit_ids       = list(qfreqs.keys()),
         coupler_edges   = coupler_pairs_c,

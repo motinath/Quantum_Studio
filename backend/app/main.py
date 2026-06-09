@@ -231,10 +231,10 @@ class FreqPlanRequest(BaseModel):
 
 @legacy.post("/frequency-plan")
 async def frequency_plan(body: FreqPlanRequest):
-    from app.qclang.ast_nodes import QubitNode, ChipNode
+    from app.qclang.ast_nodes import Attribute, QubitNode, ChipNode
     from app.qclang.compiler import compute_frequency_plan
     # Use 1-indexed names matching the rest of the pipeline
-    qubits = [QubitNode(name=f"Q{i+1}", qubit_type="transmon") for i in range(body.num_qubits)]
+    qubits = [QubitNode(name=f"Q{i+1}", attributes=[Attribute("type", "transmon")]) for i in range(body.num_qubits)]
     chip = ChipNode(name="Temp", qubits=qubits)
     return compute_frequency_plan(chip, body.target_freq_ghz, body.substrate, body.metal)
 
@@ -249,17 +249,17 @@ async def drc(body: dict):
 async def netlist(body: dict):
     from app.services.chip_generator import generate_chip
     prompt = f"{body.get('num_qubits', 5)} qubit {body.get('topology', 'grid')} chip"
-    result = await generate_chip(prompt)
+    result = generate_chip(prompt)
     return {"netlist": result.get("code", ""), "num_qubits": result.get("num_qubits")}
 
 
 @legacy.post("/placement")
 async def placement(body: dict):
-    from app.qclang.ast_nodes import QubitNode, ChipNode
+    from app.qclang.ast_nodes import Attribute, QubitNode, ChipNode
     from app.qclang.compiler import compute_placement
     n = body.get("num_qubits", 5)
     # Use 1-indexed names matching the rest of the pipeline
-    qubits = [QubitNode(name=f"Q{i+1}", qubit_type="transmon") for i in range(n)]
+    qubits = [QubitNode(name=f"Q{i+1}", attributes=[Attribute("type", "transmon")]) for i in range(n)]
     chip = ChipNode(name="Temp", qubits=qubits)
     return compute_placement(chip)
 

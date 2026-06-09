@@ -147,7 +147,11 @@ async def get_simulation(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
-    result = await db.execute(select(Simulation).where(Simulation.id == sim_id))
+    result = await db.execute(
+        select(Simulation)
+        .join(Project, Simulation.project_id == Project.id)
+        .where(Simulation.id == sim_id, Project.owner_id == user.id)
+    )
     sim = result.scalar_one_or_none()
     if not sim:
         raise HTTPException(status_code=404, detail="Simulation not found")

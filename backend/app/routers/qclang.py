@@ -93,6 +93,7 @@ def _compile_qcl_full(source: str, target: str) -> dict[str, Any]:
 class ParseRequest(BaseModel):
     source: str
     project_id: str | None = None
+    name: str | None = None
 
 
 class CompileRequest(BaseModel):
@@ -172,6 +173,14 @@ async def parse_qclang(body: ParseRequest) -> dict[str, Any]:
             }
         except Exception as e:
             return {"success": False, "errors": [{"severity": "error", "message": str(e)}], "dialect": "qcl", "ast": None}
+
+    elif _is_qcl_dialect(body.source) and not _QCLFULL_AVAILABLE:
+        return {
+            "success": False,
+            "errors": [{"severity": "error", "message": "Full QCL compiler is not available. Please use the .qc dialect."}],
+            "dialect": "qcl",
+            "ast": None,
+        }
 
     # .qc dialect
     errors: list[dict] = []
@@ -315,9 +324,10 @@ async def save_qclang(
 
     is_valid = not any(e["severity"] == "error" for e in errors)
 
-    # Determine filename based on dialect
+    # Determine filename based on dialect; use provided name to avoid collisions
     dialect = "qcl" if _is_qcl_dialect(body.source) else "qc"
-    filename = f"project.{dialect}"
+    base_name = body.name.strip() if body.name else "project"
+    filename = f"{base_name}.{dialect}"
 
     existing = await db.execute(
         select(QCLangFile).where(

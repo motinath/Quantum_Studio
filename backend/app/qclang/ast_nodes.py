@@ -19,8 +19,14 @@ class Attribute:
 @dataclass
 class QubitNode:
     name: str
-    qubit_type: str = "transmon"
     attributes: list[Attribute] = field(default_factory=list)
+
+    @property
+    def qubit_type(self) -> str:
+        for a in self.attributes:
+            if a.key == "type":
+                return str(a.value)
+        return "transmon"
 
     def get(self, key: str, default: Any = None) -> Any:
         for a in self.attributes:

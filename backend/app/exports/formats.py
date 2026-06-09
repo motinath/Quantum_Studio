@@ -7,6 +7,7 @@ returning a string (text formats) or bytes (binary formats).
 
 from __future__ import annotations
 
+import html
 import json
 import math
 from datetime import datetime
@@ -224,6 +225,7 @@ def export_svg(
     svg.append('  <!-- Qubits -->')
     for q in qubits:
         px, py = qubit_map[q.id]
+        safe_id = html.escape(str(q.id))
         svg += [
             f'  <rect x="{px-r_px}" y="{py-r_px}" width="{r_px*2}" height="{r_px*2}" '
             f'rx="3" fill="#1E293B" stroke="#7C3AED" stroke-width="2"/>',
@@ -232,7 +234,7 @@ def export_svg(
             f'  <line x1="{px}" y1="{py-4}" x2="{px}" y2="{py+4}" '
             f'stroke="#EF4444" stroke-width="2"/>',
             f'  <text x="{px}" y="{py+r_px+14}" text-anchor="middle" '
-            f'font-size="10" font-family="monospace" fill="#94A3B8">{q.id}</text>',
+            f'font-size="10" font-family="monospace" fill="#94A3B8">{safe_id}</text>',
         ]
 
     svg.append('</svg>')

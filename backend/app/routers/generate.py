@@ -130,7 +130,7 @@ async def generate(
     body: GenerateRequest,
     user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
-    result = await generate_chip(body.prompt, body.substrate, body.metal)
+    result = generate_chip(body.prompt, body.substrate, body.metal)
     return result
 
 

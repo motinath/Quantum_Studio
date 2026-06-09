@@ -25,7 +25,7 @@ def run_verification(payload: dict[str, Any]) -> dict[str, Any]:
     """
     try:
         return _run_v2_drc(payload)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return _run_v1_fallback(payload)
 
 

@@ -98,20 +98,27 @@ def generate_tapeout_package(
         "substrate":    substrate,
         "metal":        metal,
         "layer_map":    LAYER_MAP,
-        "files": [
-            f"{project_name}_{version}.gds",
-            f"{project_name}_{version}.svg",
-            f"{project_name}_{version}.dxf",
-            f"{project_name}_{version}.qc",
-            f"{project_name}_{version}_fab_spec.json",
-            f"{project_name}_{version}_drc_report.txt",
-            f"{project_name}_{version}_design_report.txt",
-        ],
-        "generated_at":   datetime.utcnow().isoformat(),
-        "fab_notes":      fab_notes,
-        "process_check":  process_check,
-        "engine":         "quantum-studio-v2",
+        "files": [],
     }
+
+    # Only list files that were actually produced
+    if gds_content:
+        manifest["files"].append(f"{project_name}_{version}.gds")
+    if svg_content:
+        manifest["files"].append(f"{project_name}_{version}.svg")
+    if dxf_content:
+        manifest["files"].append(f"{project_name}_{version}.dxf")
+    if qclang_src:
+        manifest["files"].append(f"{project_name}_{version}.qc")
+    manifest["files"].extend([
+        f"{project_name}_{version}_fab_spec.json",
+        f"{project_name}_{version}_drc_report.txt",
+        f"{project_name}_{version}_design_report.txt",
+    ])
+    manifest["generated_at"]  = datetime.utcnow().isoformat()
+    manifest["fab_notes"]     = fab_notes
+    manifest["process_check"] = process_check
+    manifest["engine"]        = "quantum-studio-v2"
 
     return {
         "manifest":    manifest,

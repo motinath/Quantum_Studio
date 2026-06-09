@@ -103,7 +103,11 @@ def _build_logical_graph(n: int, topology: str):
                                       label=f"star_arm_{i}"))
 
     elif topology in ("heavy_hex", "heavy-hex"):
-        # IBM heavy-hex: two rows, alternating vertical links
+        # NOTE: Current implementation is a ladder graph, not a true IBM heavy-hex.
+        # A true heavy-hex requires degree-3 boundary nodes and degree-2 interior
+        # nodes in a hexagonal tiling. This simplified version is kept for
+        # backward compatibility; users needing the correct topology should use
+        # an external layout engine.
         cols_top = math.ceil(n / 2)
         cols_bot = n - cols_top
         top = [f"Q{i+1}" for i in range(cols_top)]

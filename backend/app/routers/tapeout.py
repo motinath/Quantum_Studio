@@ -71,7 +71,11 @@ async def download_gds(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Response:
-    result = await db.execute(select(TapeoutPackage).where(TapeoutPackage.id == package_id))
+    result = await db.execute(
+        select(TapeoutPackage)
+        .join(Project, TapeoutPackage.project_id == Project.id)
+        .where(TapeoutPackage.id == package_id, Project.owner_id == user.id)
+    )
     pkg = result.scalar_one_or_none()
     if not pkg:
         raise HTTPException(status_code=404, detail="Package not found")

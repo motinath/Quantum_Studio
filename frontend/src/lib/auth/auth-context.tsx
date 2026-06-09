@@ -132,6 +132,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUser(newUser);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
+    // Clear any stale real JWT token so subsequent API calls don't use an old session
+    localStorage.removeItem("qs_token");
   };
 
   // ── signUp: calls the real backend /api/auth/register ───────────────────
