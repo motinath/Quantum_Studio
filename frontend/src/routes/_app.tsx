@@ -16,8 +16,6 @@ import {
   Settings as SettingsIcon,
   User as UserIcon,
   CreditCard,
-  Bell,
-  Search,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { DesignProvider } from "@/lib/design-context";
@@ -43,7 +41,7 @@ function AppLayout() {
   const TITLES: Record<string, string> = {
     "/dashboard": "Workspace",
     "/projects": "Projects",
-    "/designer": "Designer",
+    "/designer": "ChatBot",
     "/architecture-explorer": "Architecture Explorer",
     "/schematic-editor": "Schematic Editor",
     "/layout-viewer": "Layout Viewer",
@@ -89,17 +87,8 @@ function AppLayout() {
                 <span>Project: {user.organization}</span>
               </div>
 
-              {/* Right Group: Search, Alerts, Profile Dropdown */}
+              {/* Right Group: Profile Dropdown */}
               <div className="flex items-center gap-2">
-                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center cursor-pointer">
-                  <Search className="h-4 w-4" />
-                </button>
-                <button className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center relative cursor-pointer">
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent shadow-sm shadow-accent/40 animate-pulse"></span>
-                </button>
-                <span className="h-4 w-px bg-slate-200 mx-1" />
-
                 <DropdownMenu>
                   <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white p-0.5 pr-2.5 text-[11px] font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-accent/20 focus:outline-none cursor-pointer">
                     <Avatar className="h-6 w-6 border border-slate-100">
