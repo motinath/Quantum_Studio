@@ -11,14 +11,7 @@ const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000"
 // ── Generic fetch helper ──────────────────────────────────────────────────────
 
 async function api<T>(path: string, options: RequestInit = {}, fallback?: T): Promise<T> {
-  let token: string | null = null;
-  try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      token = localStorage.getItem("qs_token");
-    }
-  } catch {
-    // SSR or localStorage blocked
-  }
+  const token = typeof window !== "undefined" ? localStorage.getItem("qs_token") : null;
   const res = await fetch(`${BACKEND_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -555,7 +548,6 @@ export function initiateGithubLogin(): void {
   );
   window.location.href = `${backendUrl}/api/auth/github/authorize`;
 }
-
 // ── Client-side fallback generator ───────────────────────────────────────────
 // Keeps the designer working even when backend is offline.
 

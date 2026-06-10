@@ -28,6 +28,27 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 
 export type Role = UserRole;
 
+export const DEMO_ACCOUNTS = [
+  {
+    role: "admin" as UserRole,
+    name: "Admin User",
+    email: "admin@silicofeller.com",
+    organization: "Silicofeller Labs",
+  },
+  {
+    role: "org_manager" as UserRole,
+    name: "Organization Manager",
+    email: "manager@quantumlabs.com",
+    organization: "Quantum Labs",
+  },
+  {
+    role: "engineer" as UserRole,
+    name: "Quantum Engineer",
+    email: "engineer@quantumlabs.com",
+    organization: "Quantum Labs",
+  },
+];
+
 export function canAccess(role: UserRole, resource: string): boolean {
   if (role === "admin") return true;
   if (resource === "admin") return false;
@@ -42,11 +63,13 @@ interface AuthContextType {
   hydrated: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  signInAs: (role: UserRole) => void;
   signUp: (
     name: string,
     email: string,
     password: string,
     organization: string,
+    role?: UserRole,
   ) => Promise<{ ok: boolean; error?: string }>;
   confirmVerification: (email: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
   signInWithGoogle: (idToken: string) => Promise<{ ok: boolean; error?: string }>;
@@ -58,7 +81,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = "qs_token";
-const USER_KEY = "qs_user";
+const USER_KEY = "silicofeller.auth.user";
 
 /** Safe localStorage access — returns null during SSR */
 function getStorageItem(key: string): string | null {
@@ -88,6 +111,15 @@ function removeStorageItem(key: string): void {
   } catch {
     // Ignore
   }
+}
+
+function _makeInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "U";
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -134,8 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             removeStorageItem(USER_KEY);
             setUser(null);
           }
-          // If cached user exists, keep using it. Token stays in localStorage.
-          // The next API call will reveal if the token is truly expired.
         }
       } catch (e) {
         console.error("Failed to restore auth session", e);
@@ -147,34 +177,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     restore();
   }, []);
 
+  // Offline fallback: match demo accounts by email (no password check — dev only)
+  const _signInOffline = useCallback((email: string): { ok: boolean; error?: string } => {
+    const demo = DEMO_ACCOUNTS.find(
+      (a) => a.email.toLowerCase() === email.toLowerCase(),
+    );
+    if (!demo) {
+      return { ok: false, error: "Backend offline and no matching demo account" };
+    }
+    const newUser: User = {
+      id: `u_${demo.role}`,
+      name: demo.name,
+      email: demo.email,
+      role: demo.role,
+      organization: demo.organization,
+      initials: _makeInitials(demo.name),
+    };
+    setUser(newUser);
+    setStorageItem(USER_KEY, JSON.stringify(newUser));
+    return { ok: true };
+  }, []);
+
+  // Quick demo login (bypasses real auth — development convenience only)
+  const signInAs = useCallback((role: UserRole) => {
+    const demo = DEMO_ACCOUNTS.find((a) => a.role === role) ?? DEMO_ACCOUNTS[0];
+    const newUser: User = {
+      id: `u_${demo.role}`,
+      name: demo.name,
+      email: demo.email,
+      role: demo.role,
+      organization: demo.organization,
+      initials: _makeInitials(demo.name),
+    };
+    setUser(newUser);
+    setStorageItem(USER_KEY, JSON.stringify(newUser));
+  }, []);
+
   const signIn = useCallback(
     async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!email || !email.includes("@")) {
+        return { ok: false, error: "Invalid email" };
+      }
+      if (!password) {
+        return { ok: false, error: "Password is required" };
+      }
+
       setIsLoading(true);
       try {
         const data = await loginUser(email, password);
-        const loggedInUser: User = {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role as UserRole,
-          organization: data.user.organization,
-          initials: data.user.initials,
-        };
-        // Double-ensure token is stored (loginUser already stores it, but be safe)
-        setStorageItem(TOKEN_KEY, data.access_token);
-        setStorageItem(USER_KEY, JSON.stringify(loggedInUser));
-        setUser(loggedInUser);
-        console.log("[Auth] signIn success, token stored:", !!data.access_token);
-        return { ok: true };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Login failed";
-        console.error("[Auth] signIn failed:", message);
-        return { ok: false, error: message };
+        const serverUser = data.user;
+        if (serverUser) {
+          const loggedInUser: User = {
+            id: serverUser.id,
+            name: serverUser.name,
+            email: serverUser.email,
+            role: serverUser.role as UserRole,
+            organization: serverUser.organization,
+            initials: serverUser.initials,
+          };
+          setStorageItem(TOKEN_KEY, data.access_token);
+          setStorageItem(USER_KEY, JSON.stringify(loggedInUser));
+          setUser(loggedInUser);
+          console.log("[Auth] signIn success, token stored:", !!data.access_token);
+          return { ok: true };
+        }
+        return { ok: false, error: "Invalid server response" };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Login failed";
+        // Surface friendly messages for common HTTP errors
+        if (msg.includes("401")) return { ok: false, error: "Incorrect email or password" };
+        if (msg.includes("422")) return { ok: false, error: "Invalid credentials format" };
+        if (msg.includes("verify your email address")) {
+          return { ok: false, error: "Please verify your email address." };
+        }
+        // Backend offline — fall back to demo account matching
+        return _signInOffline(email);
       } finally {
         setIsLoading(false);
       }
     },
-    [],
+    [_signInOffline],
   );
 
   const signUp = useCallback(
@@ -183,6 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: string,
       password: string,
       organization: string,
+      role: UserRole = "engineer",
     ): Promise<{ ok: boolean; error?: string }> => {
       setIsLoading(true);
       try {
@@ -213,7 +296,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organization: data.user.organization,
           initials: data.user.initials,
         };
-        // Double-ensure token is stored
         setStorageItem(TOKEN_KEY, data.access_token);
         setStorageItem(USER_KEY, JSON.stringify(registeredUser));
         setUser(registeredUser);
@@ -316,6 +398,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hydrated,
         isLoading,
         signIn,
+        signInAs,
         signUp,
         confirmVerification,
         signOut,

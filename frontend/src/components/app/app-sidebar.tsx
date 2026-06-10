@@ -67,17 +67,18 @@ const NAV: { label: string | null; items: NavItem[] }[] = [
       { title: "Projects", url: "/projects", icon: FolderKanban },
       { title: "ChatBot", url: "/designer", icon: Sparkles },
       { title: "Architecture Explorer", url: "/architecture-explorer", icon: Network },
-      { title: "Designer", url: "/layout-viewer", icon: LayoutTemplate },
       { title: "Schematic Editor", url: "/schematic-editor", icon: PenSquare },
+      { title: "Layout Viewer", url: "/layout-viewer", icon: LayoutTemplate },
       { title: "Component Library", url: "/component-library", icon: Library },
     ],
   },
   {
     label: "Simulation & Analysis",
     items: [
+      { title: "Verification", url: "/verification", icon: CheckCircle2, badge: "12" },
       { title: "Simulations", url: "/simulations", icon: PlayCircle },
       { title: "Physics Analysis", url: "/physics-analysis", icon: Atom },
-      { title: "Verification", url: "/verification", icon: CheckCircle2, badge: "12" },
+      
     ],
   },
   {

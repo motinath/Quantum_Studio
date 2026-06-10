@@ -16,8 +16,8 @@ import {
   Settings as SettingsIcon,
   User as UserIcon,
   CreditCard,
-  Bell,
   Search,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { DesignProvider } from "@/lib/design-context";
@@ -43,7 +43,7 @@ function AppLayout() {
   const TITLES: Record<string, string> = {
     "/dashboard": "Workspace",
     "/projects": "Projects",
-    "/designer": "Designer",
+    "/designer": "ChatBot",
     "/architecture-explorer": "Architecture Explorer",
     "/schematic-editor": "Schematic Editor",
     "/layout-viewer": "Layout Viewer",

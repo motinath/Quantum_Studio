@@ -16,7 +16,6 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-import sqlalchemy as sa
 
 from app.config import settings
 
@@ -106,5 +105,4 @@ async def init_db() -> None:
                     log.info(f"Database migration: Added column {col_name} to users table.")
                 except Exception as e:
                     log.error(f"Database migration: Failed to add column {col_name}: {e}")
-                    
     log.info("Database tables ensured.")
