@@ -16,6 +16,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
+import { Route as AuthSessionTimeoutRouteImport } from './routes/_auth/session-timeout'
 import { Route as AuthGithubCallbackRouteImport } from './routes/_auth/github-callback'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AppVersionControlRouteImport } from './routes/_app/version-control'
@@ -72,6 +73,11 @@ const AuthSignUpRoute = AuthSignUpRouteImport.update({
 const AuthSignInRoute = AuthSignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSessionTimeoutRoute = AuthSessionTimeoutRouteImport.update({
+  id: '/session-timeout',
+  path: '/session-timeout',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/version-control': typeof AppVersionControlRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/github-callback': typeof AuthGithubCallbackRoute
+  '/session-timeout': typeof AuthSessionTimeoutRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/auth/github/callback': typeof AuthAuthGithubCallbackRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/version-control': typeof AppVersionControlRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/github-callback': typeof AuthGithubCallbackRoute
+  '/session-timeout': typeof AuthSessionTimeoutRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/auth/github/callback': typeof AuthAuthGithubCallbackRoute
@@ -287,6 +295,7 @@ export interface FileRoutesById {
   '/_app/version-control': typeof AppVersionControlRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/github-callback': typeof AuthGithubCallbackRoute
+  '/_auth/session-timeout': typeof AuthSessionTimeoutRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_auth/auth/github/callback': typeof AuthAuthGithubCallbackRoute
@@ -320,6 +329,7 @@ export interface FileRouteTypes {
     | '/version-control'
     | '/forgot-password'
     | '/github-callback'
+    | '/session-timeout'
     | '/sign-in'
     | '/sign-up'
     | '/auth/github/callback'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/version-control'
     | '/forgot-password'
     | '/github-callback'
+    | '/session-timeout'
     | '/sign-in'
     | '/sign-up'
     | '/auth/github/callback'
@@ -384,6 +395,7 @@ export interface FileRouteTypes {
     | '/_app/version-control'
     | '/_auth/forgot-password'
     | '/_auth/github-callback'
+    | '/_auth/session-timeout'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
     | '/_auth/auth/github/callback'
@@ -446,6 +458,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof AuthSignInRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/session-timeout': {
+      id: '/_auth/session-timeout'
+      path: '/session-timeout'
+      fullPath: '/session-timeout'
+      preLoaderRoute: typeof AuthSessionTimeoutRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/github-callback': {
@@ -672,6 +691,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 interface AuthRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthGithubCallbackRoute: typeof AuthGithubCallbackRoute
+  AuthSessionTimeoutRoute: typeof AuthSessionTimeoutRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
   AuthAuthGithubCallbackRoute: typeof AuthAuthGithubCallbackRoute
@@ -680,6 +700,7 @@ interface AuthRouteChildren {
 const AuthRouteChildren: AuthRouteChildren = {
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthGithubCallbackRoute: AuthGithubCallbackRoute,
+  AuthSessionTimeoutRoute: AuthSessionTimeoutRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
   AuthAuthGithubCallbackRoute: AuthAuthGithubCallbackRoute,

@@ -11,7 +11,7 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { SocialButton } from "@/components/auth/social-button";
 import { QuantumHero } from "@/components/auth/quantum-hero";
 import { useAuth } from "@/lib/auth/auth-context";
-import { sendOTP } from "@/lib/api/backend";
+import { resendOTP } from "@/lib/api/backend";
 import { GoogleLogin } from "@react-oauth/google";
 
 export const Route = createFileRoute("/_auth/sign-up")({
@@ -46,7 +46,7 @@ interface FormState {
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { signUp, signInWithGoogle, signInWithGitHub, isLoading } = useAuth();
+  const { signUp, confirmVerification, signInWithGoogle, signInWithGitHub, isLoading } = useAuth();
   const [step, setStep] = useState<"details" | "otp">("details");
   const [otp, setOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -91,13 +91,13 @@ function SignUpPage() {
 
       setSendingOtp(true);
       try {
-        await sendOTP(form.email);
+        await signUp(form.fullName, form.email, form.password, form.organization);
         toast.success("Verification code sent!", {
           description: "Please check your email inbox or developer terminal logs.",
         });
         setStep("otp");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to send code";
+        const msg = err instanceof Error ? err.message : "Failed to register";
         toast.error(msg);
         setErrors({ email: msg });
       } finally {
@@ -109,9 +109,9 @@ function SignUpPage() {
         return;
       }
 
-      const res = await signUp(form.fullName, form.email, form.password, form.organization, otp);
+      const res = await confirmVerification(form.email, otp);
       if (!res.ok) {
-        const errMsg = res.error ?? "Registration failed";
+        const errMsg = res.error ?? "Verification failed";
         toast.error(errMsg);
         setErrors({ otp: errMsg });
         return;
@@ -124,7 +124,7 @@ function SignUpPage() {
   const resendOtp = async () => {
     setSendingOtp(true);
     try {
-      await sendOTP(form.email);
+      await resendOTP(form.email);
       toast.success("Verification code resent successfully!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send code");

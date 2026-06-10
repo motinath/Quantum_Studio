@@ -468,39 +468,50 @@ export async function registerUser(
   email: string,
   password: string,
   organization: string,
-  otp: string,
-): Promise<AuthResponse> {
+): Promise<{ detail: string }> {
   const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password, organization, otp }),
+    body: JSON.stringify({ name, email, password, organization }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: "Registration failed" }));
     throw new Error(body.detail ?? "Registration failed");
   }
+  return res.json();
+}
+
+export async function verifyOTP(email: string, otp: string): Promise<AuthResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Verification failed" }));
+    throw new Error(body.detail ?? "Verification failed");
+  }
   const data: AuthResponse = await res.json();
-  // Store token immediately — guard for SSR
   try {
     if (data.access_token && typeof window !== "undefined" && window.localStorage) {
       localStorage.setItem("qs_token", data.access_token);
-      console.log("[API] registerUser: token stored in localStorage");
+      console.log("[API] verifyOTP: token stored in localStorage");
     }
   } catch (e) {
-    console.warn("[API] registerUser: failed to store token", e);
+    console.warn("[API] verifyOTP: failed to store token", e);
   }
   return data;
 }
 
-export async function sendOTP(email: string): Promise<{ detail: string }> {
-  const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
+export async function resendOTP(email: string): Promise<{ detail: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/resend-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: "Failed to send code" }));
-    throw new Error(body.detail ?? "Failed to send code");
+    const body = await res.json().catch(() => ({ detail: "Failed to resend code" }));
+    throw new Error(body.detail ?? "Failed to resend code");
   }
   return res.json();
 }

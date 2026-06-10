@@ -23,6 +23,8 @@ from app.auth import create_access_token, get_current_user, hash_password, verif
 from app.config import settings
 from app.database import get_db
 from app.models import User, UserRole
+from app.schemas.otp import VerifyOTPRequest, ResendOTPRequest
+from app.services.email_service import send_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -35,7 +37,7 @@ class RegisterRequest(BaseModel):
     password: str
     organization: str = "Independent"
     role: UserRole = UserRole.engineer
-    otp: str
+    otp: str | None = None
 
 
 class OTPRequest(BaseModel):
@@ -244,6 +246,7 @@ async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_
             organization="Independent",
             oauth_provider="google",
             oauth_subject=google_sub,
+            is_verified=True,
         )
         db.add(user)
 
@@ -255,42 +258,119 @@ async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_
     return TokenResponse(access_token=token, user=_user_to_dict(user))
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    # 1. Verify OTP
-    stored_info = otp_store.get(body.email)
-    if not stored_info:
-        raise HTTPException(status_code=400, detail="No verification code requested for this email")
-    
-    if datetime.utcnow() > stored_info["expires_at"]:
-        otp_store.pop(body.email, None)
-        raise HTTPException(status_code=400, detail="Verification code has expired")
-    
-    if stored_info["otp"] != body.otp.strip():
-        raise HTTPException(status_code=400, detail="Invalid verification code")
-    
-    # Clean verification code on success
-    otp_store.pop(body.email, None)
-
-    # 2. Check if user already exists
+    # 1. Check if user already exists
     result = await db.execute(select(User).where(User.email == body.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # 3. Create user
+    # 2. Generate secure 6-digit OTP
+    otp = f"{secrets.randbelow(1000000):06d}"
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    # 3. Create user (with is_verified=False)
     user = User(
         name=body.name,
         email=body.email,
         hashed_password=hash_password(body.password),
         organization=body.organization,
         role=body.role,
+        is_verified=False,
+        email_otp=otp,
+        otp_expires_at=expires_at,
+        otp_attempts=0,
     )
     db.add(user)
     await db.flush()
     await db.refresh(user)
 
+    # 4. Send email
+    send_otp_email(body.email, otp, body.name)
+
+    return {"detail": "Registration successful. Verification email sent."}
+
+
+@router.post("/verify-otp", response_model=TokenResponse)
+async def verify_otp(body: VerifyOTPRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_verified:
+        token = create_access_token({"sub": user.id}, timedelta(minutes=settings.access_token_expire_minutes))
+        return TokenResponse(access_token=token, user=_user_to_dict(user))
+
+    # Limit to 5 attempts
+    if user.otp_attempts >= 5:
+        raise HTTPException(status_code=400, detail="Too many failed verification attempts. Please request a new code.")
+
+    # Check OTP exists
+    if not user.email_otp:
+        raise HTTPException(status_code=400, detail="No verification code has been generated. Please request a code.")
+
+    # Check OTP expiration
+    if user.otp_expires_at is None or datetime.utcnow() > user.otp_expires_at:
+        raise HTTPException(status_code=400, detail="Verification code has expired. Please request a new code.")
+
+    # Check OTP matches
+    if user.email_otp != body.otp.strip():
+        user.otp_attempts += 1
+        await db.commit()
+        attempts_left = 5 - user.otp_attempts
+        if attempts_left <= 0:
+            raise HTTPException(status_code=400, detail="Invalid code. Too many failed attempts. Code locked.")
+        raise HTTPException(status_code=400, detail=f"Invalid verification code. {attempts_left} attempts remaining.")
+
+    # Mark user as verified and clear OTP fields
+    user.is_verified = True
+    user.email_otp = None
+    user.otp_expires_at = None
+    user.otp_attempts = 0
+    await db.flush()
+
     token = create_access_token({"sub": user.id}, timedelta(minutes=settings.access_token_expire_minutes))
     return TokenResponse(access_token=token, user=_user_to_dict(user))
+
+
+@router.post("/resend-otp")
+async def resend_otp(body: ResendOTPRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_verified:
+        return {"detail": "Email already verified."}
+
+    # Cooldown limit: 60 seconds.
+    # Creation time: otp_expires_at - 5 minutes.
+    # Cooldown ends at: creation time + 60 seconds = otp_expires_at - 4 minutes.
+    if user.otp_expires_at is not None:
+        cooldown_end = user.otp_expires_at - timedelta(minutes=4)
+        if datetime.utcnow() < cooldown_end:
+            time_left = int((cooldown_end - datetime.utcnow()).total_seconds())
+            raise HTTPException(
+                status_code=429,
+                detail=f"Please wait {time_left} seconds before requesting a new code."
+            )
+
+    # Generate new OTP
+    otp = f"{secrets.randbelow(1000000):06d}"
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    user.email_otp = otp
+    user.otp_expires_at = expires_at
+    user.otp_attempts = 0
+    await db.flush()
+
+    # Send new email
+    send_otp_email(body.email, otp, user.name)
+
+    return {"detail": "Verification email resent successfully."}
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -303,6 +383,12 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please verify your email address.",
         )
 
     token = create_access_token({"sub": user.id}, timedelta(minutes=settings.access_token_expire_minutes))
@@ -436,6 +522,7 @@ async def github_callback(code: str, state: str | None = None, db: AsyncSession 
                 organization="Independent",
                 oauth_provider="github",
                 oauth_subject=github_id,
+                is_verified=True,
             )
             db.add(user)
 
@@ -458,3 +545,68 @@ async def github_callback(code: str, state: str | None = None, db: AsyncSession 
             url=f"{frontend_url}/auth/github/callback?error=github_api_error",
             status_code=302,
         )
+
+
+@router.get("/test-email")
+async def test_email():
+    import traceback
+    from app.services.email_service import send_email
+    
+    # 1. Capture loaded configurations
+    smtp_user = settings.smtp_user or settings.smtp_username
+    smtp_password = settings.smtp_password
+    mail_from = settings.mail_from or settings.smtp_from_email or smtp_user
+    smtp_host = settings.smtp_host or "smtp.office365.com"
+    smtp_port = settings.smtp_port or 587
+    
+    # Check if they have quotes or trailing whitespaces
+    pw_repr = repr(smtp_password)
+    user_repr = repr(smtp_user)
+    host_repr = repr(smtp_host)
+    
+    diagnostics = {
+        "smtp_host": smtp_host,
+        "smtp_host_repr": host_repr,
+        "smtp_port": smtp_port,
+        "smtp_user": smtp_user,
+        "smtp_user_repr": user_repr,
+        "smtp_password_len": len(smtp_password) if smtp_password else 0,
+        "smtp_password_empty": not bool(smtp_password),
+        "smtp_password_repr": pw_repr,
+        "mail_from": mail_from,
+        "success": False,
+        "error": None,
+        "traceback": None
+    }
+    
+    try:
+        # Call the reusable send_email function
+        subject = "Quantum Studio - SMTP Connection Diagnostics Test"
+        body = "This is a diagnostic test email to verify Outlook SMTP AUTH from within the FastAPI application environment."
+        
+        # We also catch exact SMTP exceptions directly inside test_email for detailed response
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        
+        msg = MIMEMultipart()
+        msg["From"] = f"{settings.smtp_from_name} <{mail_from}>"
+        msg["To"] = "quantum@silicofeller.com"
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
+        
+        server = smtplib.SMTP(smtp_host, int(smtp_port))
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(mail_from, "quantum@silicofeller.com", msg.as_string())
+        server.quit()
+        
+        diagnostics["success"] = True
+    except Exception as e:
+        tb = traceback.format_exc()
+        diagnostics["error"] = str(e)
+        diagnostics["traceback"] = tb
+        
+    return diagnostics

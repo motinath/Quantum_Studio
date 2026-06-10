@@ -53,6 +53,7 @@ async def seed_admin_user() -> None:
                     hashed_password=hash_password("adminpassword123"),
                     role=UserRole.admin,
                     organization="Quantum Studio",
+                    is_verified=True,
                 )
                 session.add(admin)
                 await session.commit()

@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   loginWithGoogle,
   initiateGithubLogin,
+  verifyOTP,
 } from "@/lib/api/backend";
 import { toast } from "sonner";
 
@@ -46,8 +47,8 @@ interface AuthContextType {
     email: string,
     password: string,
     organization: string,
-    otp: string,
   ) => Promise<{ ok: boolean; error?: string }>;
+  confirmVerification: (email: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
   signInWithGoogle: (idToken: string) => Promise<{ ok: boolean; error?: string }>;
   signInWithGitHub: () => void;
   completeGithubLogin: (token: string, user: User) => void;
@@ -182,11 +183,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: string,
       password: string,
       organization: string,
-      otp: string,
     ): Promise<{ ok: boolean; error?: string }> => {
       setIsLoading(true);
       try {
-        const data = await registerUser(name, email, password, organization, otp);
+        await registerUser(name, email, password, organization);
+        console.log("[Auth] signUp register success, email OTP sent");
+        return { ok: true };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Registration failed";
+        console.error("[Auth] signUp failed:", message);
+        return { ok: false, error: message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+  const confirmVerification = useCallback(
+    async (email: string, otp: string): Promise<{ ok: boolean; error?: string }> => {
+      setIsLoading(true);
+      try {
+        const data = await verifyOTP(email, otp);
         const registeredUser: User = {
           id: data.user.id,
           name: data.user.name,
@@ -199,11 +217,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStorageItem(TOKEN_KEY, data.access_token);
         setStorageItem(USER_KEY, JSON.stringify(registeredUser));
         setUser(registeredUser);
-        console.log("[Auth] signUp success, token stored:", !!data.access_token);
+        console.log("[Auth] verification success, token stored:", !!data.access_token);
         return { ok: true };
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Registration failed";
-        console.error("[Auth] signUp failed:", message);
+        const message = err instanceof Error ? err.message : "Verification failed";
+        console.error("[Auth] verification failed:", message);
         return { ok: false, error: message };
       } finally {
         setIsLoading(false);
@@ -259,22 +277,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("[Auth] GitHub login completed, state updated");
   }, []);
 
-  // Idle timeout of 2 minutes
+  // Idle timeout of 10 minutes
   useEffect(() => {
     if (!user) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
-
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         signOut();
-        toast.warning("Session Expired", {
-          description: "You have been logged out due to 2 minutes of inactivity.",
-        });
-      }, 120000); // 2 minutes (120000 ms)
+        window.location.href = "/session-timeout";
+      }, 600000); // 10 minutes (600000 ms)
     };
-
     // Events to monitor for activity
     const events = ["mousemove", "mousedown", "keypress", "scroll", "touchstart", "click"];
 
@@ -303,6 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         signIn,
         signUp,
+        confirmVerification,
         signOut,
         signInWithGoogle,
         signInWithGitHub,
