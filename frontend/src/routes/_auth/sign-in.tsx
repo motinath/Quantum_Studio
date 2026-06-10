@@ -10,9 +10,8 @@ import { FormField } from "@/components/auth/form-field";
 import { PasswordInput } from "@/components/auth/password-input";
 import { SocialButton } from "@/components/auth/social-button";
 import { QuantumHero } from "@/components/auth/quantum-hero";
-import { DEMO_ACCOUNTS, useAuth, type Role } from "@/lib/auth/auth-context";
-import { Card } from "@/components/ui/card";
-import { Shield, Building2, Cpu } from "lucide-react";
+import { useAuth } from "@/lib/auth/auth-context";
+import { GoogleLogin } from "@react-oauth/google";
 
 export const Route = createFileRoute("/_auth/sign-in")({
   head: () => ({
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/_auth/sign-in")({
 
 function SignInPage() {
   const navigate = useNavigate();
-  const { signIn, signInAs } = useAuth();
+  const { signIn, signInWithGoogle, signInWithGitHub } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -56,17 +55,20 @@ function SignInPage() {
         return;
       }
       toast.success("Signed in — welcome back");
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } finally {
       setLoading(false);
     }
   };
 
-  const quickLogin = (role: Role) => {
-    signInAs(role);
-    const acct = DEMO_ACCOUNTS.find((a) => a.role === role);
-    toast.success(`Signed in as ${acct?.name}`);
-    navigate({ to: "/" });
+  const handleGoogleLogin = async (credential: string) => {
+    const res = await signInWithGoogle(credential);
+    if (!res.ok) {
+      toast.error(res.error ?? "Google sign in failed");
+      return;
+    }
+    toast.success("Signed in with Google!");
+    navigate({ to: "/dashboard" });
   };
 
   return (
@@ -150,11 +152,21 @@ function SignInPage() {
             </div>
 
             <div className="grid gap-2.5">
-              <SocialButton
-                provider="google"
-                label="Continue with Google"
-                onClick={() => toast("Demo only")}
-              />
+              <div className="w-full flex justify-center [&>div]:w-full">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    if (credentialResponse.credential) {
+                      await handleGoogleLogin(credentialResponse.credential);
+                    }
+                  }}
+                  onError={() => {
+                    toast.error("Google sign in failed");
+                  }}
+                  theme="outline"
+                  shape="pill"
+                  width="100%"
+                />
+              </div>
               <SocialButton
                 provider="github"
                 label="Continue with GitHub"
@@ -169,55 +181,7 @@ function SignInPage() {
             </div>
           </AuthCard>
 
-          <div>
-            <div className="mb-3 flex items-center gap-2">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Demo quick login
-              </span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <div className="grid gap-2.5">
-              {[
-                {
-                  role: "admin" as const,
-                  icon: Shield,
-                  title: "Admin",
-                  desc: "admin@silicofeller.com",
-                },
-                {
-                  role: "org_manager" as const,
-                  icon: Building2,
-                  title: "Organization Manager",
-                  desc: "manager@quantumlabs.com",
-                },
-                {
-                  role: "engineer" as const,
-                  icon: Cpu,
-                  title: "Engineer",
-                  desc: "engineer@quantumlabs.com",
-                },
-              ].map((q) => (
-                <Card
-                  key={q.role}
-                  onClick={() => quickLogin(q.role)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && quickLogin(q.role)}
-                  className="flex cursor-pointer items-center gap-3 rounded-2xl border-border p-3 shadow-none transition-colors hover:bg-[color:var(--accent-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
-                    <q.icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-foreground">{q.title}</div>
-                    <div className="truncate text-xs text-muted-foreground">{q.desc}</div>
-                  </div>
-                  <span className="text-xs font-medium text-accent">Sign in →</span>
-                </Card>
-              ))}
-            </div>
-          </div>
+
         </div>
       </section>
     </div>

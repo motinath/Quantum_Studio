@@ -14,8 +14,8 @@ client = TestClient(app)
 # Global dictionary to store captured OTPs: { email: otp }
 captured_otps = {}
 
-def mock_send_otp_email(email: str, otp: str, name: str = "User"):
-    print(f"\n[MOCK EMAIL SERVICE] Captured OTP for {email} (User: {name}): {otp}\n")
+def mock_send_otp_email(email: str, otp: str, name: str = "there"):
+    print(f"\n[MOCK EMAIL SERVICE] Captured OTP for {email} ({name}): {otp}\n")
     captured_otps[email] = otp
     return True
 

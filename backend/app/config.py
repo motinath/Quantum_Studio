@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Auth
     secret_key: str = "dev-secret-key-change-in-production-minimum-32-chars"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 10  # 10 minutes
+    access_token_expire_minutes: int = 2  # 2 minutes
 
     # SMTP Settings (optional for registration verification email)
     smtp_host: str = "smtp.office365.com"

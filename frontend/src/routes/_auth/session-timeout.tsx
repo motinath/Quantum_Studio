@@ -55,7 +55,7 @@ function SessionTimeoutPage() {
 
               <h3 className="text-base font-bold text-slate-950 mb-2">Inactivity Timeout</h3>
               <p className="text-sm text-slate-500 leading-relaxed max-w-[320px] mb-8">
-                Your session was automatically logged out for security after 10 minutes of idle time.
+                Your session was automatically logged out for security after 2 minutes of idle time.
                 Any unsaved actions might require re-entry.
               </p>
 

@@ -99,39 +99,9 @@ def _user_to_dict(user: User) -> dict:
 otp_store: dict[str, dict] = {}
 
 
-def send_verification_email(email: str, otp: str) -> bool:
-    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
-        return False
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = f"{settings.smtp_from_name} <{settings.smtp_from_email or settings.smtp_username}>"
-        msg['To'] = email
-        msg['Subject'] = f"{otp} is your verification code"
-        
-        body = f"""Hi,
-
-Thank you for registering. Please verify your email address.
-
-Your 6-digit verification code is:
-{otp}
-
-This code will expire in 5 minutes.
-
-If you didn't request this, you can ignore this email.
-
-Best regards,
-The Quantum Studio Team"""
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port)
-        server.starttls()
-        server.login(settings.smtp_username, settings.smtp_password)
-        server.sendmail(msg['From'], email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Error sending verification email: {e}")
-        return False
+def send_verification_email(email: str, otp: str, name: str = "there") -> bool:
+    """Send verification email using the shared HTML template from email_service."""
+    return send_otp_email(email, otp, name)
 
 
 async def _resolve_github_email(profile: GitHubUser, gh_token: str) -> str:
@@ -368,7 +338,7 @@ async def resend_otp(body: ResendOTPRequest, db: AsyncSession = Depends(get_db))
     await db.flush()
 
     # Send new email
-    send_otp_email(body.email, otp, user.name)
+    send_otp_email(body.email, otp, user.name if user else "there")
 
     return {"detail": "Verification email resent successfully."}
 

@@ -75,6 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         await init_db()
         log.info("Database ready.")
+        # Seed default admin user for dev/testing
         await seed_admin_user()
     except Exception as e:
         log.warning(f"Database init skipped (will run without persistence): {e}")

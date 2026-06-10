@@ -79,9 +79,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Create all tables if they do not exist."""
+    import sqlalchemy as sa
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+
         # Auto-upgrade database tables by adding new columns if missing.
         # We query the table first to find which columns exist and avoid raising abort-triggering exceptions.
         try:
@@ -105,4 +107,6 @@ async def init_db() -> None:
                     log.info(f"Database migration: Added column {col_name} to users table.")
                 except Exception as e:
                     log.error(f"Database migration: Failed to add column {col_name}: {e}")
+
     log.info("Database tables ensured.")
+

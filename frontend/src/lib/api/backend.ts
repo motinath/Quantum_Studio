@@ -417,41 +417,18 @@ export async function askClaude(
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    organization: string;
-    initials: string;
-  };
-}
-
-export async function loginUser(email: string, password: string): Promise<AuthResponse> {
-  const formData = new URLSearchParams();
+export async function loginUser(email: string, password: string) {
+  const formData = new FormData();
   formData.append("username", email);
   formData.append("password", password);
   const res = await fetch(`${BACKEND_URL}/api/auth/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: formData,
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: "Login failed" }));
-    throw new Error(body.detail ?? "Login failed");
-  }
-  const data: AuthResponse = await res.json();
-  // Store token immediately — guard for SSR
-  try {
-    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
-      localStorage.setItem("qs_token", data.access_token);
-      console.log("[API] loginUser: token stored in localStorage");
-    }
-  } catch (e) {
-    console.warn("[API] loginUser: failed to store token", e);
+  if (!res.ok) throw new Error("Login failed");
+  const data = await res.json();
+  if (data.access_token && typeof window !== "undefined") {
+    localStorage.setItem("qs_token", data.access_token);
   }
   return data;
 }
@@ -472,6 +449,19 @@ export async function registerUser(
     throw new Error(body.detail ?? "Registration failed");
   }
   return res.json();
+}
+
+interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    organization: string;
+    initials: string;
+  };
 }
 
 export async function verifyOTP(email: string, otp: string): Promise<AuthResponse> {
@@ -548,6 +538,8 @@ export function initiateGithubLogin(): void {
   );
   window.location.href = `${backendUrl}/api/auth/github/authorize`;
 }
+
+
 // ── Client-side fallback generator ───────────────────────────────────────────
 // Keeps the designer working even when backend is offline.
 
