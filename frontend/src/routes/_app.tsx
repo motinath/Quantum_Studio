@@ -160,7 +160,7 @@ function AppLayout() {
                       className="rounded-xl px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer focus:bg-rose-50"
                       onClick={() => {
                         signOut();
-                        navigate({ to: "/sign-in" });
+                        navigate({ to: "/" });
                       }}
                     >
                       <LogOut className="mr-2 h-3.5 w-3.5 text-rose-400" /> Sign out

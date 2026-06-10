@@ -27,30 +27,13 @@ class Settings(BaseSettings):
     # Auth
     secret_key: str = "dev-secret-key-change-in-production-minimum-32-chars"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 2  # 2 minutes
-
-    # SMTP Settings (optional for registration verification email)
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_username: str = ""
-    smtp_password: str = ""
-    smtp_from_email: str = ""
-    smtp_from_name: str = "Quantum Studio"
+    access_token_expire_minutes: int = 10080  # 7 days
 
     # CORS — localhost ports used by Vite dev server
     cors_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"
 
     # Claude / Anthropic (optional — falls back to rule-based assistant if empty)
     anthropic_api_key: str = ""
-
-    # Google OAuth
-    google_client_id: str = ""
-    google_client_secret: str = ""
-
-    # GitHub OAuth
-    github_client_id: str = ""
-    github_client_secret: str = ""
-    frontend_url: str = "http://localhost:8080"
 
     @property
     def cors_origins_list(self) -> list[str]:
