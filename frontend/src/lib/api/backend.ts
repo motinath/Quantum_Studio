@@ -310,7 +310,15 @@ export async function fetchMaterials(): Promise<{
 // ── Projects ──────────────────────────────────────────────────────────────────
 
 export async function fetchProjects(): Promise<Project[]> {
-  return api<Project[]>("/api/projects");
+  return api<Project[]>("/api/projects", { cache: "no-store" });
+}
+
+export async function fetchRecentActivity(): Promise<Array<{ title: string; time: string; project_id: string }>> {
+  try {
+    return await api("/api/projects/activity/recent", { cache: "no-store" });
+  } catch {
+    return [];
+  }
 }
 
 export async function createProject(data: {

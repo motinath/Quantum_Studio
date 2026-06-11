@@ -82,9 +82,21 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const location = import("@tanstack/react-router").then((mod) => {
+    // If router is not initialized yet (e.g. testing context), we can just ignore.
+    return null;
+  });
+
   useEffect(() => {
     refreshProjects();
   }, []);
+
+  // Listen for window focus to refresh data across tabs
+  useEffect(() => {
+    const onFocus = () => refreshProjects();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refreshProjects]);
 
   const createAndActivate = useCallback(
     async (data: Parameters<ProjectContextProps["createAndActivate"]>[0]) => {

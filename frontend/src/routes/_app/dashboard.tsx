@@ -254,6 +254,13 @@ function WorkspaceHomePage() {
             >
               <Plus className="h-4 w-4" /> Create Design
             </Link>
+            <button
+              disabled
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-4.5 py-2 text-[14px] font-medium text-[#111827] opacity-50 cursor-not-allowed shadow-sm select-none"
+              style={{ fontWeight: 500 }}
+            >
+              <Import className="h-4 w-4 text-[#111827]" /> Import Design
+            </button>
             <Link
               to="/designer"
               className="inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-4.5 py-2 text-[14px] font-medium text-[#111827] hover:bg-slate-50 transition-colors shadow-sm select-none"
@@ -261,13 +268,13 @@ function WorkspaceHomePage() {
             >
               <LayoutGrid className="h-4 w-4 text-[#111827]" /> Open Designer
             </Link>
-            <Link
-              to="/designer"
-              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-[#7C3AED] px-4.5 py-2 text-[14px] font-medium text-white hover:bg-[#6D28D9] transition-colors shadow-sm select-none"
+            <button
+              disabled
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-[#7C3AED] px-4.5 py-2 text-[14px] font-medium text-white opacity-50 cursor-not-allowed shadow-sm select-none"
               style={{ fontWeight: 500 }}
             >
               <Sparkles className="h-4 w-4" /> Ask AI ↗
-            </Link>
+            </button>
           </div>
         </motion.div>
 

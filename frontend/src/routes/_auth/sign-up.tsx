@@ -346,13 +346,11 @@ function SignUpPage() {
                 </div>
                 <SocialButton
                   provider="github"
-                  label="Sign up with GitHub"
-                  onClick={() => {
-                    const url = (
-                      import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000"
-                    ).replace(/\/$/, "");
-                    window.location.href = `${url}/api/auth/github/authorize`;
-                  }}
+                  label="Sign up with GitHub (Coming soon)"
+                  disabled={true}
+                  className="opacity-60 cursor-not-allowed"
+                  title="GitHub integration is coming soon"
+                  onClick={() => {}}
                 />
               </div>
             </>

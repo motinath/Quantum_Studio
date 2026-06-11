@@ -169,14 +169,11 @@ function SignInPage() {
               </div>
               <SocialButton
                 provider="github"
-                label="Continue with GitHub"
-                onClick={() => {
-                  const url = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(
-                    /\/$/,
-                    "",
-                  );
-                  window.location.href = `${url}/api/auth/github/authorize`;
-                }}
+                label="Continue with GitHub (Coming soon)"
+                disabled={true}
+                className="opacity-60 cursor-not-allowed"
+                title="GitHub integration is coming soon"
+                onClick={() => {}}
               />
             </div>
           </AuthCard>

@@ -224,3 +224,25 @@ async def list_versions(
         {"id": v.id, "tag": v.tag, "message": v.message, "created_at": v.created_at.isoformat()}
         for v in result.scalars().all()
     ]
+
+
+@router.get("/activity/recent")
+async def get_recent_activity(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[dict]:
+    """Get the 5 most recent activities for the user."""
+    result = await db.execute(
+        select(Project).where(Project.owner_id == user.id).order_by(Project.updated_at.desc()).limit(5)
+    )
+    projects = result.scalars().all()
+    
+    activity = []
+    for p in projects:
+        action = "Created project" if p.created_at == p.updated_at else "Updated project"
+        activity.append({
+            "title": f"{action} — {p.name}",
+            "time": p.updated_at.isoformat(),
+            "project_id": p.id,
+        })
+    return activity

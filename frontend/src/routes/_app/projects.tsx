@@ -1,800 +1,518 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "motion/react";
-import { useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Plus,
-  Cpu,
-  Search,
-  Trash2,
-  MoreHorizontal,
-  FolderOpen,
-  FlaskConical,
-  Layers,
-  Calendar,
-  ArrowRight,
-  Loader2,
-  Sparkles,
-  CircuitBoard,
-  CheckCircle2,
-  LayoutTemplate,
-  Clock,
-  Network,
-  Edit3,
-  Check,
-  X,
-  Save,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { deleteProject, updateProject, type Project } from "@/lib/api/backend";
+  IconLayoutSidebar,
+  IconSearch,
+  IconBell,
+  IconPlus,
+  IconLayoutGrid,
+  IconList,
+  IconCpu,
+  IconClock,
+  IconVectorTriangle,
+  IconSparkles,
+  IconStack2,
+  IconWaveSquare,
+  IconCircleDot,
+  IconComponents,
+  IconFile,
+  IconArrowRight
+} from "@tabler/icons-react";
 import { useProject } from "@/lib/project-context";
-import { useDesign } from "@/lib/design-context";
+import { Project, fetchRecentActivity } from "@/lib/api/backend";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/projects")({
   head: () => ({ meta: [{ title: "Projects — Silicofeller" }] }),
   component: ProjectsPage,
 });
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-slate-50 text-slate-600 border-slate-200",
-  in_progress: "bg-blue-50 text-blue-700 border-blue-100",
-  review: "bg-amber-50 text-amber-700 border-amber-100",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
-};
-
-const TOPOLOGY_OPTIONS = [
-  "custom",
-  "heavy-hex",
-  "surface-code",
-  "grid",
-  "ring",
-  "chain",
-  "star",
-  "all-to-all",
+const TEMPLATES = [
+  {
+    name: "Heavy Hex",
+    desc: "IBM-compatible topology",
+    svg: (
+      <svg width="100%" height="100%" viewBox="0 0 100 56" className="overflow-visible">
+        <line x1="20" y1="28" x2="40" y2="28" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="40" y1="28" x2="60" y2="28" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="60" y1="28" x2="80" y2="28" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="30" y1="18" x2="30" y2="38" stroke="#F59E0B" strokeWidth="1.5" opacity="0.6" />
+        <line x1="50" y1="18" x2="50" y2="38" stroke="#F59E0B" strokeWidth="1.5" opacity="0.6" />
+        <line x1="70" y1="18" x2="70" y2="38" stroke="#F59E0B" strokeWidth="1.5" opacity="0.6" />
+        {[20, 40, 60, 80].map(x => <circle key={x} cx={x} cy="28" r="5" fill="#7C3AED" />)}
+        {[30, 50, 70].map(x => <circle key={`t-${x}`} cx={x} cy="18" r="5" fill="#7C3AED" />)}
+        {[30, 50, 70].map(x => <circle key={`b-${x}`} cx={x} cy="38" r="5" fill="#7C3AED" />)}
+      </svg>
+    ),
+  },
+  {
+    name: "Surface code",
+    desc: "Error correction topology",
+    svg: (
+      <svg width="100%" height="100%" viewBox="0 0 100 56" className="overflow-visible">
+        <line x1="30" y1="20" x2="70" y2="20" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="30" y1="36" x2="70" y2="36" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="30" y1="20" x2="30" y2="36" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="50" y1="20" x2="50" y2="36" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        <line x1="70" y1="20" x2="70" y2="36" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+        {[30, 50, 70].map(x => (
+          <g key={x}>
+            <circle cx={x} cy="20" r="5" fill="#6366F1" />
+            <circle cx={x} cy="36" r="5" fill="#6366F1" />
+          </g>
+        ))}
+      </svg>
+    ),
+  },
+  {
+    name: "Linear chain",
+    desc: "Simple qubit chain",
+    svg: (
+      <svg width="100%" height="100%" viewBox="0 0 100 56" className="overflow-visible">
+        <line x1="20" y1="28" x2="80" y2="28" stroke="#7C3AED" strokeWidth="1.5" />
+        {[20, 35, 50, 65, 80].map(x => <circle key={x} cx={x} cy="28" r="5" fill="#059669" />)}
+        <circle cx="42.5" cy="28" r="4" fill="#7C3AED" />
+      </svg>
+    ),
+  },
+  {
+    name: "Custom design",
+    desc: "Start from scratch",
+    svg: (
+      <svg width="100%" height="100%" viewBox="0 0 100 56" className="overflow-visible">
+        <line x1="50" y1="15" x2="35" y2="38" stroke="#9CA3AF" strokeWidth="1.5" opacity="0.5" />
+        <line x1="50" y1="15" x2="65" y2="38" stroke="#9CA3AF" strokeWidth="1.5" opacity="0.5" />
+        <line x1="35" y1="38" x2="65" y2="38" stroke="#9CA3AF" strokeWidth="1.5" opacity="0.5" />
+        <line x1="50" y1="15" x2="50" y2="28" stroke="#9CA3AF" strokeWidth="1.5" opacity="0.5" />
+        <line x1="35" y1="38" x2="50" y2="28" stroke="#9CA3AF" strokeWidth="1.5" opacity="0.5" />
+        <line x1="65" y1="38" x2="50" y2="28" stroke="#9CA3AF" strokeWidth="1.5" opacity="0.5" />
+        <circle cx="50" cy="15" r="5" fill="#6B7280" />
+        <circle cx="35" cy="38" r="5" fill="#6B7280" />
+        <circle cx="65" cy="38" r="5" fill="#6B7280" />
+        <circle cx="50" cy="28" r="5" fill="#6B7280" />
+      </svg>
+    ),
+  },
 ];
-
-// ── Create project modal ───────────────────────────────────────────────────────
-
-function CreateModal({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (
-    data: Parameters<ReturnType<typeof useProject>["createAndActivate"]>[0],
-  ) => Promise<unknown>;
-}) {
-  const [name, setName] = useState("");
-  const [topology, setTopology] = useState("heavy-hex");
-  const [qubits, setQubits] = useState("27");
-  const [freq, setFreq] = useState("5.0");
-  const [substrate, setSubstrate] = useState("silicon");
-  const [metal, setMetal] = useState("aluminum");
-  const [saving, setSaving] = useState(false);
-
-  const handleCreate = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    await onCreate({
-      name: name.trim(),
-      topology,
-      num_qubits: parseInt(qubits) || 0,
-      target_frequency_ghz: parseFloat(freq) || 5.0,
-      substrate_material: substrate,
-      metal_layer: metal,
-    });
-    setSaving(false);
-    onClose();
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 8 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
-      >
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-accent-soft border border-accent/10 flex items-center justify-center">
-                <Cpu className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-slate-900">New Project</h2>
-                <p className="text-xs text-slate-500">Define your quantum chip parameters</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Project Name *
-            </p>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. IBM_Style_64Q"
-              className="rounded-xl text-sm border-slate-200"
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Topology
-              </p>
-              <Select value={topology} onValueChange={setTopology}>
-                <SelectTrigger className="rounded-xl text-xs h-9 border-slate-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TOPOLOGY_OPTIONS.map((t) => (
-                    <SelectItem key={t} value={t} className="text-xs capitalize">
-                      {t.replace("-", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Target Qubits
-              </p>
-              <Input
-                value={qubits}
-                onChange={(e) => setQubits(e.target.value)}
-                type="number"
-                min={1}
-                max={512}
-                className="rounded-xl text-xs h-9 border-slate-200"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Target Freq (GHz)
-              </p>
-              <Input
-                value={freq}
-                onChange={(e) => setFreq(e.target.value)}
-                type="number"
-                step={0.1}
-                className="rounded-xl text-xs h-9 border-slate-200"
-              />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Technology
-              </p>
-              <Select value={substrate} onValueChange={setSubstrate}>
-                <SelectTrigger className="rounded-xl text-xs h-9 border-slate-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="silicon" className="text-xs">
-                    Silicon
-                  </SelectItem>
-                  <SelectItem value="sapphire" className="text-xs">
-                    Sapphire
-                  </SelectItem>
-                  <SelectItem value="silicon_nitride" className="text-xs">
-                    SiN
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Metal Layer
-            </p>
-            <Select value={metal} onValueChange={setMetal}>
-              <SelectTrigger className="rounded-xl text-xs h-9 border-slate-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="aluminum" className="text-xs">
-                  Aluminum (Al) — Standard
-                </SelectItem>
-                <SelectItem value="niobium" className="text-xs">
-                  Niobium (Nb) — High Tc
-                </SelectItem>
-                <SelectItem value="tantalum" className="text-xs">
-                  Tantalum (Ta) — Best T₁
-                </SelectItem>
-                <SelectItem value="nbtin" className="text-xs">
-                  NbTiN — High KI
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="px-6 pb-6 flex gap-2">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            className="flex-1 rounded-xl text-sm font-bold h-10"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreate}
-            disabled={saving || !name.trim()}
-            className="flex-1 rounded-xl bg-accent text-white text-sm font-bold h-10"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-            ) : (
-              <Plus className="h-4 w-4 mr-1.5" />
-            )}
-            Create Project
-          </Button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ── Project card ──────────────────────────────────────────────────────────────
-
-function ProjectOptionsModal({ project, onClose }: { project: Project; onClose: () => void }) {
-  const navigate = useNavigate();
-
-  const handleGoToChatbot = () => {
-    navigate({ to: "/designer" });
-    onClose();
-  };
-
-  const handleGoToDesigner = () => {
-    navigate({ to: "/layout-viewer" });
-    onClose();
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 8 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-100"
-      >
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Cpu className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-slate-900">{project.name}</h2>
-                <p className="text-xs text-slate-500">Choose your workspace layout</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 grid grid-cols-2 gap-4">
-          <button
-            onClick={handleGoToChatbot}
-            className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-accent hover:bg-accent-soft group transition-all duration-200 text-center cursor-pointer focus:outline-none"
-          >
-            <div className="h-14 w-14 rounded-2xl bg-accent-soft group-hover:bg-accent flex items-center justify-center mb-4 transition-colors">
-              <Sparkles className="h-7 w-7 text-accent group-hover:text-white transition-colors" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-950 mb-1">Chatbot</h3>
-            <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-              Design quantum chips using AI chatbot prompts.
-            </p>
-          </button>
-
-          <button
-            onClick={handleGoToDesigner}
-            className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-accent hover:bg-accent-soft group transition-all duration-200 text-center cursor-pointer focus:outline-none"
-          >
-            <div className="h-14 w-14 rounded-2xl bg-indigo-50 group-hover:bg-indigo-600 flex items-center justify-center mb-4 transition-colors">
-              <LayoutTemplate className="h-7 w-7 text-indigo-600 group-hover:text-white transition-colors" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-950 mb-1">Designer</h3>
-            <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-              Inspect physical 2D layout and layer views.
-            </p>
-          </button>
-        </div>
-
-        <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/50 flex justify-end">
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            className="rounded-xl text-xs font-bold h-9 px-4 text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
-          >
-            Cancel
-          </Button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 function ProjectCard({
   project,
   isActive,
-  onActivate,
-  onSelect,
-  onDelete,
-  onEdit,
+  onClick,
 }: {
   project: Project;
   isActive: boolean;
-  onActivate: () => void;
-  onSelect: () => void;
-  onDelete: () => void;
-  onEdit: () => void;
+  onClick: () => void;
 }) {
-  const navigate = useNavigate();
-  const { setActiveId } = useDesign();
-
-  const openInChatbot = () => {
-    onActivate();
-    navigate({ to: "/designer" });
+  const statusColors = {
+    active: "bg-[#D1FAE5] text-[#065F46]",
+    draft: "bg-[#F3F4F6] text-[#6B7280]",
+    in_progress: "bg-[#EEF2FF] text-[#3730A3]",
+    completed: "bg-[#D1FAE5] text-[#065F46]",
+    review: "bg-[#FEF3C7] text-[#92400E]",
   };
 
-  const openInDesigner = () => {
-    onActivate();
-    navigate({ to: "/layout-viewer" });
-  };
+  const statusLabel = project.status || "draft";
+  const sColor = statusColors[statusLabel as keyof typeof statusColors] || statusColors.draft;
 
-  const openInCanvas = () => {
-    onActivate();
-    navigate({ to: "/quantum-editor" });
-  };
+  // Real backend has_design info, but we need to derive "components" and "designs" 
+  // since the API might not expose them explicitly for this view.
+  const statsComponents = project.num_qubits > 0 ? project.num_qubits * 2 + 4 : 0;
+  const statsDesigns = project.has_design ? 1 : 0;
+  const lastActivity = project.updated_at 
+    ? new Date(project.updated_at).toLocaleDateString()
+    : "Just now";
 
   return (
-    <Card
-      onClick={onSelect}
+    <div
+      onClick={onClick}
       className={cn(
-        "rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden cursor-pointer",
-        isActive ? "border-accent ring-1 ring-accent/20" : "border-slate-200",
+        "bg-[#fff] rounded-[12px] p-[16px] cursor-pointer transition-colors duration-150",
+        isActive ? "border-[2px] border-[#7C3AED]" : "border border-[#EEEFF2] hover:border-[#C4B5FD]"
       )}
     >
-      {/* Active indicator */}
-      {isActive && <div className="h-1 bg-gradient-to-r from-accent to-violet-400 w-full" />}
-
-      <div className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "h-10 w-10 rounded-xl border flex items-center justify-center shrink-0",
-                isActive ? "bg-accent-soft border-accent/20" : "bg-slate-50 border-slate-200",
-              )}
-            >
-              <Cpu className={cn("h-5 w-5", isActive ? "text-accent" : "text-slate-400")} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-slate-900 leading-tight">{project.name}</p>
-                {isActive && (
-                  <Badge
-                    variant="outline"
-                    className="rounded-full text-[9px] font-bold px-2 py-0.5 bg-accent-soft text-accent border-accent/20"
-                  >
-                    ACTIVE
-                  </Badge>
-                )}
-              </div>
-              <p className="text-[10px] text-slate-400 mt-0.5 capitalize">
-                {project.topology.replace("-", " ")} ·{" "}
-                {project.num_qubits > 0 ? `${project.num_qubits}Q` : "–"}
-              </p>
-            </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl w-44">
-              <DropdownMenuItem
-                className="text-xs cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onActivate();
-                }}
-              >
-                <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Set as Active
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInChatbot();
-                }}
-              >
-                <Sparkles className="mr-2 h-3.5 w-3.5" /> Open in Chatbot
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInDesigner();
-                }}
-              >
-                <LayoutTemplate className="mr-2 h-3.5 w-3.5" /> Open in Designer
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInCanvas();
-                }}
-              >
-                <CircuitBoard className="mr-2 h-3.5 w-3.5" /> Open in Canvas
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-              >
-                <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-xs text-rose-600 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <div className="flex items-center gap-[10px] mb-[12px]">
+        <div className="w-[34px] h-[34px] rounded-[8px] bg-[#EDE9FE] flex items-center justify-center shrink-0">
+          <IconCpu size={16} color="#7C3AED" />
         </div>
-
-        {/* Stats row */}
-        <div className="mt-3 space-y-1.5">
-          <div className="flex items-center gap-2 text-[10px] text-slate-500">
-            <Layers className="h-3 w-3 text-slate-300" />
-            <span>
-              {project.substrate_material} / {project.metal_layer}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-[6px]">
+            <span className="text-[13px] font-[600] text-[#111827] truncate">{project.name}</span>
+            <span className={cn("text-[10px] font-[600] px-[7px] py-[2px] rounded-[20px] shrink-0 capitalize", sColor)}>
+              {statusLabel.replace("_", " ")}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-slate-500">
-            <FlaskConical className="h-3 w-3 text-slate-300" />
-            <span>{project.target_frequency_ghz} GHz target</span>
+          <div className="text-[11px] text-[#9CA3AF] truncate mt-0.5 capitalize">
+            {project.topology.replace("-", " ")} · {project.num_qubits}Q
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-slate-500">
-            <Calendar className="h-3 w-3 text-slate-300" />
-            <span>Updated {new Date(project.updated_at).toLocaleDateString()}</span>
-          </div>
-        </div>
-
-        {/* Design indicator */}
-        {project.has_design && (
-          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1 w-fit">
-            <CircuitBoard className="h-3 w-3" />
-            <span className="font-bold">Design saved</span>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
-          <Badge
-            variant="outline"
-            className={cn(
-              "rounded-full text-[10px] font-bold px-2.5 py-0.5 border",
-              STATUS_COLORS[project.status] ?? STATUS_COLORS.draft,
-            )}
-          >
-            {project.status.replace("_", " ")}
-          </Badge>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-            className="flex items-center gap-1 text-[10px] font-bold text-accent hover:underline cursor-pointer"
-          >
-            Open <ArrowRight className="h-3 w-3" />
-          </button>
         </div>
       </div>
-    </Card>
+
+      <div className="w-full h-[60px] bg-[#F8F9FB] rounded-[8px] mb-[10px] flex items-center justify-center overflow-hidden">
+        <svg width="100%" height="100%" viewBox="0 0 100 56" className="overflow-visible">
+          {isActive ? (
+            <g>
+              <line x1="20" y1="28" x2="80" y2="28" stroke="#7C3AED" strokeWidth="1.5" opacity="0.4" />
+              <line x1="35" y1="15" x2="35" y2="41" stroke="#F59E0B" strokeWidth="1.5" opacity="0.6" />
+              <line x1="65" y1="15" x2="65" y2="41" stroke="#F59E0B" strokeWidth="1.5" opacity="0.6" />
+              {[20, 35, 50, 65, 80].map(x => <circle key={x} cx={x} cy="28" r="4" fill="#7C3AED" />)}
+              <circle cx="35" cy="15" r="4" fill="#7C3AED" />
+              <circle cx="35" cy="41" r="4" fill="#7C3AED" />
+              <circle cx="65" cy="15" r="4" fill="#7C3AED" />
+              <circle cx="65" cy="41" r="4" fill="#7C3AED" />
+            </g>
+          ) : (
+            <g>
+              <line x1="20" y1="28" x2="80" y2="28" stroke="#D1D5DB" strokeWidth="1.5" />
+              <line x1="35" y1="15" x2="35" y2="41" stroke="#D1D5DB" strokeWidth="1.5" />
+              <line x1="65" y1="15" x2="65" y2="41" stroke="#D1D5DB" strokeWidth="1.5" />
+              {[20, 35, 50, 65, 80].map(x => <circle key={x} cx={x} cy="28" r="4" fill="#9CA3AF" />)}
+              <circle cx="35" cy="15" r="4" fill="#9CA3AF" />
+              <circle cx="35" cy="41" r="4" fill="#9CA3AF" />
+              <circle cx="65" cy="15" r="4" fill="#9CA3AF" />
+              <circle cx="65" cy="41" r="4" fill="#9CA3AF" />
+            </g>
+          )}
+        </svg>
+      </div>
+
+      <div className="flex flex-col gap-[4px] mb-[10px]">
+        <div className="flex items-center gap-[6px] text-[11px] text-[#6B7280]">
+          <IconStack2 size={12} color="#9CA3AF" /> {project.substrate_material || "Silicon"} / {project.metal_layer || "Aluminum"}
+        </div>
+        <div className="flex items-center gap-[6px] text-[11px] text-[#6B7280]">
+          <IconWaveSquare size={12} color="#9CA3AF" /> {project.target_frequency_ghz || 5} GHz target
+        </div>
+        <div className="flex items-center gap-[6px] text-[11px] text-[#6B7280]">
+          <IconClock size={12} color="#9CA3AF" /> {lastActivity}
+        </div>
+      </div>
+
+      <div className="border-t border-[#F3F4F6] pt-[10px] flex items-center justify-between">
+        <div className="flex gap-[10px]">
+          <div className="flex items-center gap-[3px] text-[11px] text-[#6B7280]">
+            <IconCircleDot size={11} color="#9CA3AF" /> {project.num_qubits}Q
+          </div>
+          <div className="flex items-center gap-[3px] text-[11px] text-[#6B7280]">
+            <IconComponents size={11} color="#9CA3AF" /> {statsComponents}
+          </div>
+          <div className="flex items-center gap-[3px] text-[11px] text-[#6B7280]">
+            <IconFile size={11} color="#9CA3AF" /> {statsDesigns}
+          </div>
+        </div>
+        <div className="flex items-center gap-[3px] text-[11px] text-[#7C3AED] font-[500]">
+          <IconArrowRight size={11} /> Open
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-
 function ProjectsPage() {
-  const {
-    projects,
-    activeProject,
-    setActiveProject,
-    refreshProjects,
-    createAndActivate,
-    backendOnline,
-  } = useProject();
-  const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [selectedProjectForOptions, setSelectedProjectForOptions] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
   const navigate = useNavigate();
+  const { projects, activeProject, setActiveProject, createAndActivate, refreshProjects } = useProject();
+  const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [recentActivity, setRecentActivity] = useState<Array<{ title: string; time: string; project_id: string }>>([]);
+  
+  // New Project Form State
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [npName, setNpName] = useState("");
+  const [npTopology, setNpTopology] = useState("heavy-hex");
+  const [npQubits, setNpQubits] = useState(5);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this project? This cannot be undone.")) return;
-    try {
-      await deleteProject(id);
-      await refreshProjects();
-    } catch {
-      alert("Failed to delete. Backend may be offline.");
-    }
+  useEffect(() => {
+    refreshProjects();
+  }, [refreshProjects]);
+
+  useEffect(() => {
+    fetchRecentActivity().then(setRecentActivity);
+  }, [projects]);
+
+  const handleCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!npName.trim()) return;
+    await createAndActivate({
+      name: npName,
+      topology: npTopology,
+      num_qubits: npQubits,
+    });
+    setNewProjectOpen(false);
+    setNpName("");
   };
 
-  const handleRename = async (id: string) => {
-    if (!editName.trim()) return;
-    try {
-      await updateProject(id, { name: editName.trim() } as never);
-      await refreshProjects();
-    } catch {}
-    setEditingId(null);
-  };
-
-  const filtered = projects.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.topology.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredProjects = projects.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
 
   return (
-    <div className="h-full overflow-y-auto bg-[#F8F9FB]">
-      <AnimatePresence>
-        {showCreate && (
-          <CreateModal onClose={() => setShowCreate(false)} onCreate={createAndActivate} />
-        )}
-        {selectedProjectForOptions && (
-          <ProjectOptionsModal
-            project={selectedProjectForOptions}
-            onClose={() => setSelectedProjectForOptions(null)}
-          />
-        )}
-      </AnimatePresence>
-
-      <div className="mx-auto max-w-7xl px-6 py-6">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900">Projects</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                {projects.length} project{projects.length !== 1 ? "s" : ""}
-                {activeProject && (
-                  <>
-                    {" "}
-                    · Active: <strong className="text-accent">{activeProject.name}</strong>
-                  </>
-                )}
-                {!backendOnline && (
-                  <span className="text-amber-600 ml-2">(offline — backend not running)</span>
-                )}
-              </p>
-            </div>
-            <Button
-              onClick={() => setShowCreate(true)}
-              className="rounded-xl bg-accent hover:bg-accent/90 text-white h-9 text-xs font-bold shadow-sm shadow-accent/20"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" /> New Project
-            </Button>
+    <div className="h-full w-full bg-[#F8F9FB] flex flex-col font-sans text-[#111827]">
+      <div className="flex-1 overflow-y-auto pb-[40px]">
+        {/* SECTION 2 — PAGE HEADER */}
+        <div className="px-[24px] pt-[24px] flex justify-between items-start">
+          <div>
+            <h1 className="text-[24px] font-[700] text-[#111827] leading-none">Projects</h1>
+            <p className="text-[13px] text-[#6B7280] mt-[8px]">
+              {projects.length} projects · Active:{" "}
+              {activeProject ? (
+                <span className="text-[#7C3AED] font-[500]">{activeProject.name}</span>
+              ) : (
+                "None"
+              )}
+            </p>
           </div>
-        </motion.div>
+          <Dialog open={newProjectOpen} onOpenChange={setNewProjectOpen}>
+            <DialogTrigger asChild>
+              <button className="flex items-center gap-[6px] bg-[#7C3AED] text-[#fff] border-none rounded-[8px] px-[18px] py-[9px] text-[13px] font-[500] cursor-pointer hover:bg-[#6D28D9] transition-colors">
+                <IconPlus size={14} /> New project
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] font-sans">
+              <DialogHeader>
+                <DialogTitle>Create New Project</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateProject} className="flex flex-col gap-4 mt-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-slate-700">Project Name</label>
+                  <input 
+                    autoFocus
+                    required
+                    value={npName}
+                    onChange={e => setNpName(e.target.value)}
+                    placeholder="e.g. 64Q Heavy Hex processor"
+                    className="border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-[#7C3AED]"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-slate-700">Topology</label>
+                  <select 
+                    value={npTopology}
+                    onChange={e => setNpTopology(e.target.value)}
+                    className="border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-[#7C3AED]"
+                  >
+                    <option value="heavy-hex">Heavy Hex</option>
+                    <option value="surface-code">Surface code</option>
+                    <option value="linear-chain">Linear chain</option>
+                    <option value="custom">Custom design</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-slate-700">Number of Qubits</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    required
+                    value={npQubits}
+                    onChange={e => setNpQubits(parseInt(e.target.value) || 5)}
+                    className="border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-[#7C3AED]"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-2">
+                  <button type="button" onClick={() => setNewProjectOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-md cursor-pointer">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 text-sm bg-[#7C3AED] text-white rounded-md hover:bg-[#6D28D9] cursor-pointer">
+                    Create
+                  </button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-        {/* Search + filter row */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="relative max-w-xs flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <Input
+        {/* SECTION 3 — SEARCH + FILTERS + VIEW TOGGLE */}
+        <div className="px-[24px] mt-[24px] flex items-center gap-[10px] flex-wrap">
+          <div className="bg-[#fff] border border-[#E5E7EB] rounded-[8px] px-[14px] py-[8px] max-w-[320px] flex-1 flex items-center gap-[8px]">
+            <IconSearch size={15} color="#9CA3AF" />
+            <input 
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects…"
-              className="pl-8 rounded-xl text-xs h-9 border-slate-200"
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search projects..."
+              className="border-none outline-none text-[13px] text-[#111827] bg-transparent w-full"
             />
+          </div>
+
+          <div className="flex items-center gap-[8px]">
+            <button className="px-[12px] py-[5px] rounded-[20px] text-[12px] font-[500] cursor-pointer transition-colors border bg-[#EDE9FE] text-[#7C3AED] border-[#C4B5FD]">
+              All projects
+            </button>
+          </div>
+
+          <div className="flex border border-[#E5E7EB] rounded-[8px] overflow-hidden ml-auto">
+            <button 
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "px-[10px] py-[6px] border-none cursor-pointer",
+                viewMode === "grid" ? "bg-[#EDE9FE] text-[#7C3AED]" : "bg-[#fff] text-[#9CA3AF] hover:text-[#6B7280]"
+              )}
+            >
+              <IconLayoutGrid size={15} />
+            </button>
+            <button 
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "px-[10px] py-[6px] border-none cursor-pointer",
+                viewMode === "list" ? "bg-[#EDE9FE] text-[#7C3AED]" : "bg-[#fff] text-[#9CA3AF] hover:text-[#6B7280]"
+              )}
+            >
+              <IconList size={15} />
+            </button>
           </div>
         </div>
 
-        {/* Active project banner */}
+        {/* SECTION 4 — ACTIVE PROJECT WORKSPACE CARD */}
         {activeProject && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4"
-          >
-            <Card className="rounded-2xl border border-accent/20 bg-accent-soft p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-xl bg-accent flex items-center justify-center">
-                    <Cpu className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900">{activeProject.name}</p>
-                    <p className="text-xs text-slate-600">
-                      {activeProject.topology} · {activeProject.num_qubits}Q ·{" "}
-                      {activeProject.target_frequency_ghz} GHz
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate({ to: "/designer" })}
-                    className="rounded-xl text-xs font-bold h-8 border-accent/20 hover:bg-white"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 mr-1.5 text-accent" /> AI Designer
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate({ to: "/schematic-editor" })}
-                    className="rounded-xl text-xs font-bold h-8 border-accent/20 hover:bg-white"
-                  >
-                    <CircuitBoard className="h-3.5 w-3.5 mr-1.5 text-accent" /> QCLang Editor
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate({ to: "/quantum-editor" })}
-                    className="rounded-xl text-xs font-bold h-8 border-accent/20 hover:bg-white"
-                  >
-                    <Network className="h-3.5 w-3.5 mr-1.5 text-accent" /> Canvas
-                  </Button>
+          <div className="mx-[24px] mt-[24px] bg-[#fff] rounded-[12px] border border-[#EEEFF2] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-[20px_24px] flex items-center justify-between gap-[16px] flex-wrap">
+            <div className="flex items-center gap-[16px]">
+              <div className="w-[44px] h-[44px] rounded-[10px] bg-[#EDE9FE] flex items-center justify-center shrink-0">
+                <IconCpu size={20} color="#7C3AED" />
+              </div>
+              <div>
+                <h2 className="text-[16px] font-[600] text-[#111827] leading-none">{activeProject.name}</h2>
+                <p className="text-[13px] text-[#6B7280] mt-[5px] capitalize">
+                  {activeProject.topology.replace("-", " ")} · {activeProject.num_qubits} Qubits · {activeProject.target_frequency_ghz} GHz · {activeProject.substrate_material} / {activeProject.metal_layer}
+                </p>
+                <div className="mt-[8px] flex gap-[8px]">
+                  {activeProject.has_design && (
+                    <span className="bg-[#D1FAE5] text-[#065F46] text-[11px] font-[600] px-[8px] py-[2px] rounded-[20px]">
+                      Design Ready
+                    </span>
+                  )}
+                  <span className="flex items-center gap-[4px] text-[11px] text-[#9CA3AF]">
+                    <IconClock size={11} /> 
+                    Last edited {activeProject.updated_at ? new Date(activeProject.updated_at).toLocaleDateString() : "recently"}
+                  </span>
                 </div>
               </div>
-            </Card>
-          </motion.div>
-        )}
+            </div>
 
-        {/* Grid */}
-        {filtered.length === 0 ? (
-          <Card className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
-            <FolderOpen className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm font-bold text-slate-700">
-              {projects.length === 0 ? "No projects yet" : "No matches"}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              {projects.length === 0
-                ? "Create a project to start designing quantum chips."
-                : `No projects matching "${search}"`}
-            </p>
-            {projects.length === 0 && (
-              <Button
-                onClick={() => setShowCreate(true)}
-                className="mt-4 rounded-xl bg-accent text-white text-xs font-bold"
+            <div className="flex gap-[8px]">
+              <button 
+                onClick={() => navigate({ to: "/layout-viewer" })}
+                className="flex items-center gap-[6px] bg-[#7C3AED] text-[#fff] border-none rounded-[8px] px-[14px] py-[8px] text-[12px] font-[500] cursor-pointer hover:bg-[#6D28D9]"
               >
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> Create your first project
-              </Button>
-            )}
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((p, i) => (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: i * 0.04 }}
+                <IconLayoutGrid size={14} /> Open designer
+              </button>
+              <button 
+                onClick={() => navigate({ to: "/quantum-editor" })}
+                className="flex items-center gap-[6px] bg-[#fff] text-[#111827] border border-[#E5E7EB] rounded-[8px] px-[14px] py-[8px] text-[12px] font-[500] cursor-pointer hover:bg-[#F9FAFB]"
               >
-                {editingId === p.id ? (
-                  <Card className="rounded-2xl border border-accent/20 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-bold text-slate-700 mb-2">Rename Project</p>
-                    <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="rounded-xl text-xs mb-2"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleRename(p.id);
-                        if (e.key === "Escape") setEditingId(null);
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleRename(p.id)}
-                        className="rounded-lg bg-accent text-white text-xs flex-1"
-                      >
-                        <Check className="h-3 w-3 mr-1" /> Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditingId(null)}
-                        className="rounded-lg text-xs"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </Card>
-                ) : (
-                  <ProjectCard
-                    project={p}
-                    isActive={activeProject?.id === p.id}
-                    onActivate={() => setActiveProject(p)}
-                    onSelect={() => {
-                      setActiveProject(p);
-                      setSelectedProjectForOptions(p);
-                    }}
-                    onDelete={() => handleDelete(p.id)}
-                    onEdit={() => {
-                      setEditingId(p.id);
-                      setEditName(p.name);
-                    }}
-                  />
-                )}
-              </motion.div>
-            ))}
+                <IconVectorTriangle size={14} /> Open canvas
+              </button>
+              <button 
+                onClick={() => navigate({ to: "/designer" })}
+                className="flex items-center gap-[6px] bg-[#fff] text-[#111827] border border-[#E5E7EB] rounded-[8px] px-[14px] py-[8px] text-[12px] font-[500] cursor-pointer hover:bg-[#F9FAFB]"
+              >
+                <IconSparkles size={14} /> AI designer
+              </button>
+            </div>
           </div>
         )}
+
+        {/* SECTION 6 — PROJECT CARDS GRID */}
+        <div className="mt-[32px]">
+          <h3 className="px-[24px] mb-[10px] text-[11px] font-[600] text-[#9CA3AF] uppercase tracking-[0.07em]">
+            All projects
+          </h3>
+          <div className="px-[24px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[14px]">
+            {filteredProjects.map(p => (
+              <ProjectCard 
+                key={p.id}
+                project={p}
+                isActive={activeProject?.id === p.id}
+                onClick={() => setActiveProject(p)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* SECTION 5 — START FROM TEMPLATE */}
+        <div className="mt-[32px]">
+          <h3 className="px-[24px] mb-[10px] text-[11px] font-[600] text-[#9CA3AF] uppercase tracking-[0.07em]">
+            Start from template
+          </h3>
+          <div className="px-[24px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[12px]">
+            {TEMPLATES.map(t => (
+              <div 
+                key={t.name}
+                className="bg-[#fff] rounded-[12px] border border-[#EEEFF2] p-[14px] opacity-50 cursor-not-allowed"
+              >
+                <div className="w-full h-[56px] bg-[#F8F7FA] rounded-[8px] mb-[10px] flex items-center justify-center overflow-hidden">
+                  {t.svg}
+                </div>
+                <h4 className="text-[12px] font-[600] text-[#111827]">{t.name}</h4>
+                <p className="text-[11px] text-[#9CA3AF] mt-[2px] mb-[8px] truncate">{t.desc}</p>
+                <button className="flex items-center gap-[3px] text-[11px] text-[#7C3AED] font-[500] border-none bg-transparent p-0 cursor-not-allowed pointer-events-none">
+                  <IconPlus size={11} /> Create
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SECTION 7 — BOTTOM ROW */}
+        <div className="mt-[32px] px-[24px] grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-[14px]">
+          {/* Recent Activity */}
+          <div className="bg-[#fff] rounded-[12px] border border-[#EEEFF2] p-[16px]">
+            <div className="flex items-center gap-[6px] mb-[12px]">
+              <IconClock size={15} color="#7C3AED" />
+              <span className="text-[13px] font-[600] text-[#111827]">Recent activity</span>
+            </div>
+            
+            <div className="pl-[16px] border-l border-[#E5E7EB] ml-[8px]">
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, i, arr) => (
+                  <div key={i} className={cn("relative", i !== arr.length - 1 && "pb-[12px]")}>
+                    <div className="absolute left-[-22px] top-[3px] w-[10px] h-[10px] rounded-full bg-[#7C3AED] border-[2px] border-[#fff]" />
+                    <div className="text-[12px] font-[500] text-[#111827] leading-none">{activity.title}</div>
+                    <div className="text-[11px] text-[#9CA3AF] mt-[3px]">
+                      {new Date(activity.time).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-[11px] text-[#9CA3AF] mt-[4px]">No recent activity</div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Insights */}
+          <div className="bg-[#fff] rounded-[12px] border border-[#EEEFF2] p-[16px]">
+            <div className="flex items-center gap-[6px] mb-[12px]">
+              <IconSparkles size={15} color="#7C3AED" />
+              <span className="text-[13px] font-[600] text-[#111827]">AI project insights</span>
+            </div>
+
+            <div className="bg-[#EDE9FE] rounded-[8px] p-[12px] mb-[10px]">
+              <div className="text-[20px] font-[700] text-[#7C3AED] leading-none">90%</div>
+              <div className="text-[11px] text-[#5B21B6] mt-[4px]">Design complete</div>
+              <div className="h-[4px] bg-[#C4B5FD] rounded-[4px] mt-[8px] overflow-hidden">
+                <div className="h-full bg-[#7C3AED] rounded-[4px] w-[90%]" />
+              </div>
+            </div>
+
+            <h4 className="text-[11px] font-[600] text-[#6B7280] uppercase tracking-[0.06em] mb-[6px] mt-[16px]">
+              Recommendations
+            </h4>
+            <div className="flex flex-col gap-[6px]">
+              <div className="bg-[#F8F9FB] rounded-[6px] p-[8px] text-[11px] text-[#111827] border border-[#EEEFF2] leading-relaxed">
+                Check coupler frequency spacing
+              </div>
+              <div className="bg-[#F8F9FB] rounded-[6px] p-[8px] text-[11px] text-[#111827] border border-[#EEEFF2] leading-relaxed">
+                Run full DRC verification
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
