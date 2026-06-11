@@ -25,6 +25,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.database import init_db
 from app.routers import auth, claude, generate, materials, projects, qclang, simulations, tapeout, verification
+from app.routers import design  # V2 design pipeline
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s  %(message)s")
@@ -52,8 +53,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="SILICOFELLER Quantum Studio API",
     description=(
-        "AI-augmented quantum hardware design platform. "
-        "QCLang → Qiskit Metal → Physics Simulation → Verification → Tapeout."
+        "AI-augmented quantum hardware EDA platform — V2. "
+        "DesignGraph → Constraints → Placement → Routing → DRC → Qiskit Metal → Tapeout."
     ),
     version="2.0.0",
     lifespan=lifespan,
@@ -64,10 +65,14 @@ app = FastAPI(
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 
+# In development, allow ANY origin so preflight OPTIONS never returns 400.
+# In production, lock down to the explicit allow-list from settings.
+_cors_origins: list[str] = ["*"] if not settings.is_production else settings.cors_origins_list
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=settings.is_production,   # must be False when origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -107,6 +112,7 @@ app.include_router(verification.router)      # /api/verification/...
 app.include_router(tapeout.router)           # /api/tapeout/...
 app.include_router(materials.router)         # /api/materials/...
 app.include_router(claude.router)            # /api/claude/...
+app.include_router(design.router)            # /api/design/... (V2 pipeline)
 
 
 # ── Frequency plan (legacy frontend compat) ───────────────────────────────────
