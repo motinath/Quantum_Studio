@@ -318,9 +318,10 @@ function LandingPage() {
       >
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {POSTS.map((p) => (
-            <a
+            <Link
               key={p.title}
-              href="#"
+              to="/blog/$slug"
+              params={{ slug: p.slug }}
               className="group rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_rgba(242,107,58,0.25)]"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
@@ -331,7 +332,7 @@ function LandingPage() {
               <h3 className="mt-1 text-sm font-semibold leading-snug text-foreground group-hover:text-[#F26B3A]">
                 {p.title}
               </h3>
-            </a>
+            </Link>
           ))}
         </div>
       </Section>
@@ -449,7 +450,7 @@ function SiteNav({
           <a href="#features" className="transition-colors hover:text-foreground">
             Features
           </a>
-          <a href="/blog" className="transition-colors hover:text-foreground">
+          <a href="#blog" className="transition-colors hover:text-foreground">
             Blog
           </a>
           <Link to="/our-team" className="transition-colors hover:text-foreground">
@@ -686,4 +687,25 @@ const POSTS = [
   { tag: "Quantum", title: "The future of fault-tolerant quantum chips" },
   { tag: "Engineering", title: "Automated qubit-layout generation, end to end" },
   { tag: "Industry", title: "Insights from leading quantum labs on AI workflows" },
+] as const;
+  {
+    tag: "Engineering",
+    title: "SQuADDS: A Validated Design Database and Simulation Workflow for Superconducting Qubits",
+    slug: "squadds-qubit-design"
+  },
+  {
+    tag: "Quantum",
+    title: "Surface Codes: Towards Practical Large-Scale Quantum Computation",
+    slug: "surface-codes"
+  },
+  {
+    tag: "Research",
+    title: "Shadow Hamiltonian Simulation: Exponential Savings in Quantum Dynamics",
+    slug: "shadow-hamiltonian"
+  },
+  {
+    tag: "Industry",
+    title: "Quantum Supremacy Using a Programmable Superconducting Processor",
+    slug: "quantum-supremacy"
+  }
 ] as const;

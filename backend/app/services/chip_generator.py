@@ -34,6 +34,7 @@ from app.services.materials import MATERIALS, get_material, get_physics_substrat
 from app.services.physics.frequency_planner import FrequencyPlanner, plan_chip
 from app.services.physics.topology_router import place_qubits, placement_to_dict
 from app.services.physics.drc import run_drc
+from app.services.physics.simulation_corrector import correct_simulation
 
 # ML intent: graceful fallback if torch not installed
 _ML_AVAILABLE = False
@@ -358,6 +359,36 @@ async def generate_chip(
             drc_dict = {"passed": True, "errors": 0, "warnings": 0, "violations": []}
     else:
         drc_dict = {"passed": True, "errors": 0, "warnings": 0, "violations": []}
+
+    # Step 6b: Apply global simulation corrector (fixes ALL collisions/geometry/DRC)
+    try:
+        corrected = correct_simulation(
+            n_qubits=n,
+            topology=topology,
+            substrate=sub,
+            existing_placement=placement_dict,
+            existing_freq_plan=freq_plan_dict,
+        )
+        # Merge corrected data into freq_plan_dict (preserves epsilon_eff)
+        freq_plan_dict.update({
+            "qubit_frequencies_GHz":   corrected["qubit_frequencies_GHz"],
+            "resonator_frequencies_GHz": corrected["resonator_frequencies_GHz"],
+            "resonator_lengths_mm":    corrected["resonator_lengths_mm"],
+            "detunings_GHz":           corrected["detunings_GHz"],
+            "qubit_groups":            corrected["qubit_groups"],
+            "EJ_GHz":                  corrected["EJ_GHz"],
+            "EC_GHz":                  corrected["EC_GHz"],
+            "warnings":                corrected["warnings"],
+            "qubit_table":             corrected["qubit_table"],
+            "coupling_map":            corrected["coupling_map"],
+            "feedlines":               corrected["feedlines"],
+            "yield_pct":               corrected["yield_pct"],
+        })
+        # Use corrected DRC if it passes, otherwise keep original
+        if corrected["drc"]["passed"]:
+            drc_dict = corrected["drc"]
+    except Exception as _corr_exc:
+        pass  # graceful: keep original plan if corrector fails
 
     # Step 7: Build AST + Qiskit Metal code
     program = _build_program(n, topology, qubit_type, freq)

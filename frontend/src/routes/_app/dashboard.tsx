@@ -9,8 +9,10 @@ import {
   MoreHorizontal, Plus, Network, Cpu, PlayCircle,
   ShieldCheck, Upload, Download, AlertTriangle, Bell,
   Clock, Sparkles, FileText, Pencil, Zap, ArrowRight,
+  CalendarDays, MessageSquare, Boxes, Radio,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { QuantumChip3D } from "@/components/app/quantum-chip-3d";
 import { useDesign } from "@/lib/design-context";
 import { useProject } from "@/lib/project-context";
 import { fetchHealth, type HealthResponse } from "@/lib/api/backend";
@@ -232,7 +234,7 @@ function WorkspaceHomePage() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto bg-[#F8F9FB]">
+    <div className="h-full overflow-y-auto bg-[#F8F9FB]" style={{ backgroundImage: "var(--grid-pattern)", backgroundSize: "32px 32px" }}>
       <div className="mx-auto max-w-[1600px] px-6 py-6">
         {/* Header */}
         <motion.div
@@ -240,11 +242,35 @@ function WorkspaceHomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Welcome back, {user?.name?.split(" ")[0] || "there"}! Here's what's happening with your
-            quantum designs.
-          </p>
+          <p className="text-[11px] font-bold text-slate-500">Wed, Jun 10</p>
+          <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900">Hello, {user?.name?.split(" ")[0] || "there"}</h1>
+              <p className="mt-1 text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-sky-500 to-violet-600">
+                How can I help you today?
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "Ask AI", icon: Sparkles, primary: true },
+                { label: "Run HFSS", icon: Radio },
+                { label: "Create workspace", icon: Boxes },
+                { label: "Connect apps", icon: Network },
+              ].map((a) => (
+                <Link
+                  key={a.label}
+                  to={a.label === "Run HFSS" ? "/simulations" : a.label === "Create workspace" ? "/projects" : "/designer"}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-xs font-bold shadow-sm transition ${
+                    a.primary
+                      ? "border-violet-300 bg-gradient-to-r from-violet-500 to-violet-400 text-white"
+                      : "border-teal-200 bg-white text-slate-900 hover:border-accent"
+                  }`}
+                >
+                  <a.icon className="h-3.5 w-3.5" /> {a.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         </motion.div>
 
         {/* KPI cards */}
@@ -280,6 +306,71 @@ function WorkspaceHomePage() {
               </Card>
             </motion.div>
           ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 xl:grid-cols-12 gap-4">
+          <Card className="xl:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <CheckCircle2 className="h-4 w-4 text-accent" /> My Tasks
+              </h2>
+              <button className="rounded-lg p-1 text-slate-400 hover:bg-slate-50"><MoreHorizontal className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-2">
+              {[
+                ["Review HFSS eigenmode sweep", "High", "Today", "bg-rose-50 text-rose-700"],
+                ["Export Q3D capacitance matrix", "Low", "3 days left", "bg-slate-100 text-slate-700"],
+                ["Prepare EPR loss summary", "Medium", "Tomorrow", "bg-amber-50 text-amber-700"],
+              ].map(([task, priority, due, cls]) => (
+                <div key={task} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+                  <span className="text-xs font-semibold text-slate-800">{task}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${cls}`}>{priority}</span>
+                  <span className="text-[10px] font-semibold text-slate-500">{due}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="xl:col-span-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <CalendarDays className="h-4 w-4 text-accent" /> Calendar
+              </h2>
+              <span className="text-[10px] font-bold text-slate-400">June</span>
+            </div>
+            <div className="grid grid-cols-5 gap-1 text-center">
+              {["Fri 04", "Sat 05", "Sun 06", "Mon 07", "Tue 08"].map((d) => (
+                <div key={d} className={`rounded-xl px-2 py-2 text-[10px] font-bold ${d.includes("Mon") ? "bg-accent text-white" : "bg-slate-50 text-slate-600"}`}>
+                  <span className="block text-[9px] opacity-70">{d.split(" ")[0]}</span>{d.split(" ")[1]}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 rounded-xl bg-violet-50 px-3 py-3">
+              <p className="text-xs font-bold text-slate-900">Simulation review</p>
+              <p className="text-[10px] text-slate-500">10:00 - 11:00 AM · HFSS team</p>
+            </div>
+          </Card>
+
+          <Card className="xl:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <MessageSquare className="h-4 w-4 text-accent" /> Reminders
+              </h2>
+              <Badge variant="outline" className="rounded-full bg-slate-50 text-[9px] font-bold">Today · 3</Badge>
+            </div>
+            <div className="space-y-3">
+              {[
+                "Assess new risks identified in the morning eigenmode run.",
+                "Attach E-field heatmap to the results package.",
+                "Confirm Q3D matrix export before client demo.",
+              ].map((item, i) => (
+                <div key={item} className="flex items-start gap-3">
+                  <span className={`mt-1 h-2 w-2 rounded-full ${i === 0 ? "bg-violet-500" : i === 1 ? "bg-teal-400" : "bg-amber-400"}`} />
+                  <p className="text-xs leading-relaxed text-slate-600">{item}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
 
         {/* Row 2: projects / sim status / activity */}
@@ -568,6 +659,93 @@ function WorkspaceHomePage() {
                 </div>
               ))}
             </div>
+          </Card>
+        </div>
+
+        {/* 3D Quantum Chip Visualization — ADDED (non-destructive) */}
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <Card className="lg:col-span-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">3D Quantum Chip Visualization</h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Interactive chip layout · hover qubits for details · synced to simulation
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeProject && (
+                  <span className="text-[10px] font-bold text-accent bg-accent-soft px-2.5 py-1 rounded-full">
+                    {activeProject.name.slice(0, 22)}
+                  </span>
+                )}
+                <Link to="/results" className="text-xs font-semibold text-accent hover:underline">
+                  Full Results
+                </Link>
+              </div>
+            </div>
+            <QuantumChip3D
+              result={activeProject?.design_payload ?? (conversations.find(c => c.result)?.result as any ?? null)}
+              height={300}
+              className="w-full"
+            />
+          </Card>
+
+          <Card className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <h2 className="text-sm font-bold text-slate-900 mb-3">Chip Summary</h2>
+            {(() => {
+              const sim = activeProject?.design_payload ?? (conversations.find(c => c.result)?.result as any ?? null);
+              const fp = sim?.frequency_plan;
+              const qt: Array<{name:string; freq_GHz:number; group:string; T1_us?:number; status?:string}> = fp?.qubit_table ?? [];
+              if (!fp) return (
+                <div className="text-center py-8">
+                  <p className="text-xs text-slate-400">Generate a design to see chip summary</p>
+                </div>
+              );
+              const n = sim?.num_qubits ?? Object.keys(fp.qubit_frequencies_GHz ?? {}).length;
+              const drc = sim?.drc;
+              const yieldPct = fp?.yield_pct ?? (drc?.passed ? 98 : 85);
+              return (
+                <div className="space-y-2.5">
+                  {[
+                    { l: "Qubits", v: String(n) },
+                    { l: "Topology", v: sim?.topology ?? "—" },
+                    { l: "DRC Status", v: drc?.passed ? "PASS ✓" : `FAIL (${drc?.errors ?? 0} errors)`, color: drc?.passed ? "text-emerald-600" : "text-rose-600" },
+                    { l: "Yield Est.", v: `${yieldPct}%`, color: yieldPct >= 95 ? "text-emerald-600" : "text-amber-600" },
+                    { l: "ε_eff", v: fp?.epsilon_eff?.toFixed(3) ?? "—" },
+                    { l: "Substrate", v: fp?.substrate ?? sim?.material?.substrate ?? "silicon" },
+                  ].map(row => (
+                    <div key={row.l} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+                      <span className="text-[11px] text-slate-500">{row.l}</span>
+                      <span className={`text-[11px] font-bold ${row.color ?? "text-slate-900"}`}>{row.v}</span>
+                    </div>
+                  ))}
+                  {qt.length > 0 && (
+                    <div className="pt-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Qubit Status</p>
+                      <div className="flex flex-wrap gap-1">
+                        {qt.slice(0, 12).map(q => (
+                          <span
+                            key={q.name}
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                              q.status === "FAIL"
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            }`}
+                          >
+                            {q.name}
+                          </span>
+                        ))}
+                        {qt.length > 12 && (
+                          <span className="text-[9px] text-slate-400 font-semibold px-1.5 py-0.5">
+                            +{qt.length - 12} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </Card>
         </div>
 
