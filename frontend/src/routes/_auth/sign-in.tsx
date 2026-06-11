@@ -56,7 +56,7 @@ function SignInPage() {
         return;
       }
       toast.success("Signed in — welcome back");
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ function SignInPage() {
     signInAs(role);
     const acct = DEMO_ACCOUNTS.find((a) => a.role === role);
     toast.success(`Signed in as ${acct?.name}`);
-    navigate({ to: "/" });
+    navigate({ to: "/dashboard" });
   };
 
   return (
