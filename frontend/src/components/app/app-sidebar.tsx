@@ -17,6 +17,7 @@ import {
   Library,
   PlayCircle,
   Atom,
+  Shield,
   CheckCircle2,
   BarChart3,
   GitBranch,
@@ -78,6 +79,7 @@ const NAV: { label: string | null; items: NavItem[] }[] = [
       { title: "Verification", url: "/verification", icon: CheckCircle2, badge: "12" },
       { title: "Simulations", url: "/simulations", icon: PlayCircle },
       { title: "Physics Analysis", url: "/physics-analysis", icon: Atom },
+      { title: "Fault Tolerance Studio", url: "/fault-tolerance", icon: Shield, badge: "NEW" },
       
     ],
   },

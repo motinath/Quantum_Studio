@@ -31,6 +31,7 @@ import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppPhysicsAnalysisRouteImport } from './routes/_app/physics-analysis'
 import { Route as AppLayoutViewerRouteImport } from './routes/_app/layout-viewer'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
+import { Route as AppFaultToleranceRouteImport } from './routes/_app/fault-tolerance'
 import { Route as AppDesignerRouteImport } from './routes/_app/designer'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppComponentLibraryRouteImport } from './routes/_app/component-library'
@@ -147,6 +148,11 @@ const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFaultToleranceRoute = AppFaultToleranceRouteImport.update({
+  id: '/fault-tolerance',
+  path: '/fault-tolerance',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDesignerRoute = AppDesignerRouteImport.update({
   id: '/designer',
   path: '/designer',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/component-library': typeof AppComponentLibraryRoute
   '/dashboard': typeof AppDashboardRoute
   '/designer': typeof AppDesignerRoute
+  '/fault-tolerance': typeof AppFaultToleranceRoute
   '/integrations': typeof AppIntegrationsRoute
   '/layout-viewer': typeof AppLayoutViewerRoute
   '/physics-analysis': typeof AppPhysicsAnalysisRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/component-library': typeof AppComponentLibraryRoute
   '/dashboard': typeof AppDashboardRoute
   '/designer': typeof AppDesignerRoute
+  '/fault-tolerance': typeof AppFaultToleranceRoute
   '/integrations': typeof AppIntegrationsRoute
   '/layout-viewer': typeof AppLayoutViewerRoute
   '/physics-analysis': typeof AppPhysicsAnalysisRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/_app/component-library': typeof AppComponentLibraryRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/designer': typeof AppDesignerRoute
+  '/_app/fault-tolerance': typeof AppFaultToleranceRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/layout-viewer': typeof AppLayoutViewerRoute
   '/_app/physics-analysis': typeof AppPhysicsAnalysisRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/component-library'
     | '/dashboard'
     | '/designer'
+    | '/fault-tolerance'
     | '/integrations'
     | '/layout-viewer'
     | '/physics-analysis'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/component-library'
     | '/dashboard'
     | '/designer'
+    | '/fault-tolerance'
     | '/integrations'
     | '/layout-viewer'
     | '/physics-analysis'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/_app/component-library'
     | '/_app/dashboard'
     | '/_app/designer'
+    | '/_app/fault-tolerance'
     | '/_app/integrations'
     | '/_app/layout-viewer'
     | '/_app/physics-analysis'
@@ -529,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIntegrationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/fault-tolerance': {
+      id: '/_app/fault-tolerance'
+      path: '/fault-tolerance'
+      fullPath: '/fault-tolerance'
+      preLoaderRoute: typeof AppFaultToleranceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/designer': {
       id: '/_app/designer'
       path: '/designer'
@@ -589,6 +608,7 @@ interface AppRouteChildren {
   AppComponentLibraryRoute: typeof AppComponentLibraryRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDesignerRoute: typeof AppDesignerRoute
+  AppFaultToleranceRoute: typeof AppFaultToleranceRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppLayoutViewerRoute: typeof AppLayoutViewerRoute
   AppPhysicsAnalysisRoute: typeof AppPhysicsAnalysisRoute
@@ -613,6 +633,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppComponentLibraryRoute: AppComponentLibraryRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDesignerRoute: AppDesignerRoute,
+  AppFaultToleranceRoute: AppFaultToleranceRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppLayoutViewerRoute: AppLayoutViewerRoute,
   AppPhysicsAnalysisRoute: AppPhysicsAnalysisRoute,

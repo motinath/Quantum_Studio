@@ -10,12 +10,16 @@ import {
   Wand2,
   FileCode2,
   CheckCircle2,
-  BatteryCharging,
   Download,
   Github,
   Linkedin,
   Mail,
   Terminal,
+  MessageSquare,
+  Library,
+  MousePointer2,
+  FlaskConical,
+  Code2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SilicofellerLogo } from "@/components/silicofeller-logo";
@@ -165,34 +169,24 @@ function LandingPage() {
         <div className="mt-2 grid grid-cols-1 gap-10 lg:grid-cols-[1.1fr_1fr] lg:items-center">
           <div>
             <p className="text-[0.9375rem] leading-relaxed text-muted-foreground">
-              SilicoFeller is a quantum-AI company building the design layer for the next generation
-              of quantum hardware. We translate natural-language engineering intent into
-              production-ready quantum chip architectures — qubit layouts, coupling maps, readout
-              networks and the control HDL needed to fabricate them.
+              SilicoFeller is an AI-powered quantum chip design platform. You describe the quantum
+              chip you need — in plain language — and our platform turns that prompt into a
+              complete, fabrication-ready design. No manual layout work, no low-level HDL, just your
+              intent and an output you can build.
             </p>
             <p className="mt-4 text-[0.9375rem] leading-relaxed text-muted-foreground">
-              Our mission is to compress years of quantum chip engineering into minutes, so research
-              labs, foundries and enterprise teams can go from idea to silicon without writing a
-              single line of Q# or QASM.
+              The platform includes a full <span className="font-medium text-foreground">Schematic Editor</span> where
+              you can drag and drop qubits, couplers, resonators, and readout lines onto a live
+              canvas — composing quantum chip topologies interactively, the same way a PCB designer
+              would lay out a board. Every component placed on the canvas stays in sync with the
+              underlying design graph.
             </p>
-            <div className="mt-6 grid grid-cols-3 gap-4">
-              {[
-                { k: "128", v: "Max qubits generated" },
-                { k: "10×", v: "Faster design cycles" },
-                { k: "24/7", v: "AI design copilot" },
-              ].map((s) => (
-                <div
-                  key={s.v}
-                  className="rounded-xl border border-border bg-white/70 p-4 backdrop-blur"
-                  style={{ boxShadow: "var(--shadow-card)" }}
-                >
-                  <p className="text-2xl font-semibold text-foreground">{s.k}</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {s.v}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <p className="mt-4 text-[0.9375rem] leading-relaxed text-muted-foreground">
+              Once your design is ready, SilicoFeller automatically generates{" "}
+              <span className="font-medium text-foreground">Qiskit Metal Python code</span> — the
+              industry-standard framework for quantum chip design — so your layout is immediately
+              ready for simulation, DRC verification, and tapeout submission.
+            </p>
           </div>
           <div className="flex items-center justify-center">
             <div
@@ -213,22 +207,6 @@ function LandingPage() {
           </div>
         </div>
 
-        <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {WORKFLOW.map((step, i) => (
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.45, delay: i * 0.06 }}
-              className="rounded-xl border border-border bg-white/70 p-3 text-center text-xs font-semibold text-foreground backdrop-blur"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <span className="block text-[10px] font-medium text-accent">Step {i + 1}</span>
-              {step}
-            </motion.div>
-          ))}
-        </div>
       </Section>
 
       {/* ───────── TECHNOLOGY — circuit-grid background ───────── */}
@@ -241,14 +219,24 @@ function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5 }}
-              className="rounded-2xl border border-border bg-card/95 p-6 backdrop-blur"
+              className="overflow-hidden rounded-2xl border border-border bg-card/95 backdrop-blur"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#F26B3A]">
-                {t.eyebrow}
-              </p>
-              <h3 className="mt-2 text-base font-semibold text-foreground">{t.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t.desc}</p>
+              <div className="aspect-[16/10] w-full overflow-hidden border-b border-border bg-muted">
+                <img
+                  src={t.image}
+                  alt={t.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover object-left-top"
+                />
+              </div>
+              <div className="p-6">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#F26B3A]">
+                  {t.eyebrow}
+                </p>
+                <h3 className="mt-2 text-base font-semibold text-foreground">{t.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t.desc}</p>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -621,63 +609,58 @@ function TypingLine({ text }: { text: string }) {
   );
 }
 
-const WORKFLOW = [
-  "User Prompt",
-  "AI Understanding",
-  "Qubit Topology",
-  "Coupling & Readout",
-  "Optimization",
-  "Quantum Blueprint",
-];
 
 const TECH = [
   {
-    eyebrow: "Architectures",
-    title: "Transmon & Superconducting Qubits",
-    desc: "Generate 5-qubit transmon processors up to 128-qubit superconducting arrays with optimized layouts.",
+    eyebrow: "Schematic Editor",
+    title: "Drag-and-drop quantum layout canvas",
+    desc: "Compose transmons, couplers and resonators on a live canvas with a synced Qiskit Metal IDE.",
+    image: "/tech/schematic-editor.png",
   },
   {
-    eyebrow: "Error correction",
-    title: "Surface & Steane Codes",
-    desc: "Quantum error correction architectures built directly into the generated chip topology.",
+    eyebrow: "AI Chatbot",
+    title: "Natural-language design assistant",
+    desc: "Prompt the AI to synthesize full QPUs — topology, frequencies and DRC checks generated in seconds.",
+    image: "/tech/chatbot.png",
   },
   {
-    eyebrow: "Coupling",
-    title: "Nearest-Neighbour & Bus",
-    desc: "Choose coupling networks — nearest-neighbour, all-to-all bus, or custom routing — generated to your prompt.",
+    eyebrow: "Export & Reports",
+    title: "Tapeout-ready verification & exports",
+    desc: "Design summaries, frequency plans, DRC reports and Qiskit Metal code packaged for fabrication.",
+    image: "/tech/export-reports.png",
   },
 ] as const;
 
 const FEATURES = [
   {
-    icon: Wand2,
-    title: "Natural Language Quantum Design",
-    desc: "Describe your quantum chip requirements in plain English — no Q# or QASM required.",
+    icon: MessageSquare,
+    title: "AI Chatbot",
+    desc: "Describe your quantum chip in plain language and let the AI generate a complete QPU design — qubit topology, coupling maps, and readout networks, all from your prompt.",
   },
   {
-    icon: Sparkles,
-    title: "AI Architecture Generation",
-    desc: "Generate optimized qubit topologies and coupling networks with quantum-aware AI.",
+    icon: Library,
+    title: "Component Library",
+    desc: "Browse and insert from a curated library of Qiskit Metal components — transmons, coplanar waveguides, launch pads, and more — ready to place directly into your design.",
   },
   {
-    icon: FileCode2,
-    title: "Control HDL Generation",
-    desc: "Automatic Verilog generation for the cryogenic control plane and readout chain.",
+    icon: MousePointer2,
+    title: "Schematic Editor",
+    desc: "Drag and drop Qiskit Metal components onto a live canvas to compose quantum chip layouts interactively. Every placed component stays in sync with the underlying design graph.",
   },
   {
-    icon: CheckCircle2,
-    title: "Design Validation",
-    desc: "Built-in verification of qubit connectivity, crosstalk and gate fidelity on every generation.",
+    icon: FlaskConical,
+    title: "Chip Simulation",
+    desc: "Run electromagnetic and qubit-level simulations on your design to validate frequencies, coupling strengths, and gate fidelities before committing to fabrication.",
   },
   {
-    icon: BatteryCharging,
-    title: "Coherence Optimization",
-    desc: "AI-driven layout tuning for T1, T2 coherence times and 2-qubit gate fidelity targets.",
+    icon: Shield,
+    title: "Fault Tolerance Verification",
+    desc: "Automated checks for qubit connectivity, crosstalk, error thresholds, and surface-code compatibility — catching design issues before they reach the foundry.",
   },
   {
-    icon: Download,
-    title: "Export Ready",
-    desc: "Download GDS layouts, control HDL, calibration reports, and OpenQASM templates.",
+    icon: Code2,
+    title: "Qiskit Metal Export",
+    desc: "Export your completed design as Qiskit Metal Python code, ready for simulation, DRC verification, and tapeout submission with no manual translation required.",
   },
 ] as const;
 

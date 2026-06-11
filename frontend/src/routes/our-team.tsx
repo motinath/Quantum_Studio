@@ -33,7 +33,7 @@ const TEAM: Member[] = [
   { name: "Motinath R", role: "Quantum(Hardware)", photo: "/teams/motinath.png" },
   { name: "Viswanath M", role: "AI and Automation", photo: "/teams/Viswanath M.jpeg" },
   { name: "Harshitha Kurra", role: "Quantum Research", photo: "/teams/Harshitha.jpeg" },
-  { name: "Pushpam Raj", role: "AI and Automation", photo: "/teams/vishwa.jpeg" },
+  { name: "Pushpam Raj", role: "AI and Automation", photo: "/teams/pushpam.jpeg" },
   { name: "Hema Sri Peddu", role: "Quantum Research", photo: "/teams/Hema Sri Peddu.jpeg" },
   { name: "Praveenya Karumuri", role: "Operational Manager", photo: "/teams/Praveenya.jpeg" },
   { name: "Aakash G", role: "AI and Automation", photo: "/teams/Aakash.jpeg" },
@@ -47,6 +47,7 @@ const TEAM: Member[] = [
   { name: "Monalisa Panigrahi", role: "AI and Automation", photo: "teams/monalisa1.png" },
   { name: "Patchava Hima Bindu", role: "Quantum Research", photo: "/teams/hima bindu.jpeg" },
   { name: "Muni Sankar", role: "Quantum Research", photo: "/teams/Muni.jpeg" },
+  { name: "Bhargav Korupolu", role: "Quantum Software Developer", photo: "/teams/bhargav K.png" },
   { name: "Geepika G", role: "AI and Automation", photo: "/teams/geepika.png" },
   { name: "Sathwik Potu", role: "AI and Automation", photo: "/teams/Sathwik potu.jpeg" },
   { name: "Amrutha Varshini Manam", role: "AI and Automation", photo: "/teams/amrutha.jpeg" },
@@ -54,6 +55,9 @@ const TEAM: Member[] = [
   { name: "P Naga Yaswanth", role: "AI and Automation", photo: "/teams/yaswanth.jpeg" },
   { name: "G Naga Vamsi Subbarayudu", role: "AI and Automation", photo: "/teams/satya.jpeg" },
   { name: "Arasavelli Sai Sankar", role: "US Outreach", photo: "/teams/sai sankarr.jpeg" },
+  { name: "Kiran sai Srinivas Patnaikuni", role: "US Outreach", photo: "/teams/srinivas.png" },
+
+  
 ];
 
 function OurTeamPage() {
