@@ -9,23 +9,25 @@ import {
   MoreHorizontal, Plus, Network, Cpu, PlayCircle,
   ShieldCheck, Upload, Download, AlertTriangle, Bell,
   Clock, Sparkles, FileText, Pencil, Zap, ArrowRight,
+  Folder, Boxes, LayoutGrid, Import
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDesign } from "@/lib/design-context";
 import { useProject } from "@/lib/project-context";
 import { fetchHealth, type HealthResponse } from "@/lib/api/backend";
+import { QISKIT_CATALOG } from "@/components/quantum-editor/qiskit-metal-catalog";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({ meta: [{ title: "Workspace — Silicofeller" }] }),
   component: WorkspaceHomePage,
 });
 
-// ----- Status badge color map -----
+// ----- Status badge color map for Projects -----
 const STATUS_BADGE: Record<string, string> = {
-  draft:       "bg-slate-50 text-slate-600 border-slate-200",
+  draft: "bg-slate-50 text-slate-600 border-slate-200",
   in_progress: "bg-blue-50 text-blue-700 border-blue-100",
-  review:      "bg-amber-50 text-amber-700 border-amber-100",
-  completed:   "bg-emerald-50 text-emerald-700 border-emerald-100",
+  review: "bg-amber-50 text-amber-700 border-amber-100",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
 const ACTIVITY = [
@@ -45,7 +47,7 @@ const ACTIVITY = [
   },
   {
     icon: Pencil,
-    color: "text-accent bg-accent-soft",
+    color: "text-violet-600 bg-violet-50",
     title: "Design updated",
     sub: "SurfaceCode_49Q",
     time: "5h ago",
@@ -103,7 +105,7 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
     .join(" ");
   const area = `${path} L${w},${h} L0,${h} Z`;
   return (
-    <svg width={w} height={h} className="overflow-visible">
+    <svg width={w} height={h} className="overflow-visible select-none pointer-events-none">
       <path d={area} fill={color} opacity={0.12} />
       <path
         d={path}
@@ -181,6 +183,86 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// 8-qubit topology SVG diagram
+function QubitTopology() {
+  const nodes = [
+    { id: "Q1", x: 35, y: 35 },
+    { id: "Q2", x: 95, y: 35 },
+    { id: "Q3", x: 155, y: 35 },
+    { id: "Q4", x: 215, y: 35 },
+    { id: "Q5", x: 35, y: 105 },
+    { id: "Q6", x: 95, y: 105 },
+    { id: "Q7", x: 155, y: 105 },
+    { id: "Q8", x: 215, y: 105 },
+  ];
+
+  const couplers = [
+    // Horizontal
+    { from: "Q1", to: "Q2" },
+    { from: "Q2", to: "Q3" },
+    { from: "Q3", to: "Q4" },
+    { from: "Q5", to: "Q6" },
+    { from: "Q6", to: "Q7" },
+    { from: "Q7", to: "Q8" },
+    // Vertical
+    { from: "Q1", to: "Q5" },
+    { from: "Q2", to: "Q6" },
+    { from: "Q3", to: "Q7" },
+    { from: "Q4", to: "Q8" },
+  ];
+
+  return (
+    <svg
+      viewBox="0 0 250 140"
+      className="w-full h-auto bg-slate-50/50 rounded-lg border border-slate-100 p-2"
+    >
+      {/* Coupler connections */}
+      {couplers.map((c, i) => {
+        const fromNode = nodes.find((n) => n.id === c.from)!;
+        const toNode = nodes.find((n) => n.id === c.to)!;
+        return (
+          <line
+            key={i}
+            x1={fromNode.x}
+            y1={fromNode.y}
+            x2={toNode.x}
+            y2={toNode.y}
+            stroke="#7C3AED"
+            strokeWidth={1.5}
+            opacity={0.3}
+          />
+        );
+      })}
+
+      {/* Qubit nodes */}
+      {nodes.map((n) => (
+        <g key={n.id}>
+          <circle
+            cx={n.x}
+            cy={n.y}
+            r={14}
+            stroke="#7C3AED"
+            strokeWidth={1.5}
+            fill="#FFFFFF"
+          />
+          <text
+            x={n.x}
+            y={n.y}
+            dy=".3em"
+            textAnchor="middle"
+            fontSize={9}
+            fill="#7C3AED"
+            className="font-medium select-none"
+            style={{ fontSize: "9px" }}
+          >
+            {n.id}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 function WorkspaceHomePage() {
   const { user } = useAuth();
   const { conversations } = useDesign();
@@ -193,157 +275,377 @@ function WorkspaceHomePage() {
 
   const designSessions = conversations.filter(c => c.result).length;
   const totalProjects = projects.length || designSessions || 0;
-  const activeProjects = projects.filter(p => p.status === "in_progress").length || designSessions;
 
-  const kpis = [
+  const metrics = [
     {
       label: "Total Projects",
       value: String(totalProjects),
-      sub: activeProject ? `Active: ${activeProject.name.slice(0, 18)}` : "No active project",
-      icon: TrendingUp,
-      color: "#7C3AED",
-      spark: [Math.max(0,totalProjects-4), Math.max(0,totalProjects-3), Math.max(0,totalProjects-2), Math.max(0,totalProjects-1), totalProjects, totalProjects, totalProjects, totalProjects],
+      subtext: activeProject ? `Active: ${activeProject.name.slice(0, 18)}` : "No active project",
+      icon: Folder,
+      iconBg: "#EDE9FE",
+      iconColor: "#7C3AED",
+      sparkColor: "#7C3AED",
+      sparkPoints: [Math.max(0, totalProjects-4), Math.max(0, totalProjects-3), Math.max(0, totalProjects-2), Math.max(0, totalProjects-1), totalProjects, totalProjects],
     },
     {
-      label: "Design Sessions",
+      label: "Total Designs",
       value: String(designSessions),
-      sub: `${conversations.length} conversations`,
-      icon: Activity,
-      color: "#10B981",
-      spark: [0, 1, 1, 2, 2, 3, designSessions-1 > 0 ? designSessions-1 : 0, designSessions],
+      subtext: `${conversations.length} conversations`,
+      icon: Cpu,
+      iconBg: "#EFF6FF",
+      iconColor: "#2563EB",
+      sparkColor: "#2563EB",
+      sparkPoints: [0, 1, 1, 2, designSessions-1 > 0 ? designSessions-1 : 0, designSessions],
     },
     {
       label: "Backend Status",
       value: health?.status === "online" ? "Online" : "Offline",
-      sub: health?.status === "online" ? `v${health.version}` : "Run python run.py",
-      subColor: health?.status === "online" ? "text-emerald-600" : "text-amber-600",
+      subtext: health?.status === "online" ? `v${health.version}` : "Run python run.py",
       icon: ShieldAlert,
-      color: health?.status === "online" ? "#10B981" : "#F59E0B",
-      spark: [1,1,1,1,1,1,1,health?.status === "online" ? 1 : 0],
+      iconBg: health?.status === "online" ? "#EFFDF4" : "#FEF3C7",
+      iconColor: health?.status === "online" ? "#10B981" : "#F59E0B",
+      sparkColor: health?.status === "online" ? "#10B981" : "#F59E0B",
+      sparkPoints: [1, 1, 1, 1, 1, health?.status === "online" ? 1 : 0],
     },
     {
-      label: "Active Designs",
-      value: String(activeProjects),
-      sub: "In design sessions",
-      icon: CheckCircle2,
-      color: "#3B82F6",
-      spark: [0, 0, 1, 1, 2, 2, Math.max(0,activeProjects-1), activeProjects],
+      label: "Component Library",
+      value: QISKIT_CATALOG.length.toString(),
+      subtext: "Official QComponent gallery",
+      icon: Boxes,
+      iconBg: "#F0FDF4",
+      iconColor: "#059669",
+      sparkColor: "#059669",
+      sparkPoints: [25, 28, 27, 32, 35, QISKIT_CATALOG.length],
     },
   ];
 
   return (
-    <div className="h-full overflow-y-auto bg-[#F8F9FB]">
+    <div
+      className="h-full overflow-y-auto bg-[#F8F9FB]"
+      style={{
+        backgroundImage: "radial-gradient(#E5E7EB 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
+      }}
+    >
       <div className="mx-auto max-w-[1600px] px-6 py-6">
-        {/* Header */}
+        {/* SECTION 1 — HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
+          className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
         >
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Welcome back, {user?.name?.split(" ")[0] || "there"}! Here's what's happening with your
-            quantum designs.
-          </p>
+          <div>
+            <p className="text-[13px] text-[#6B7280] font-normal" style={{ fontWeight: 400 }}>
+              {new Date().toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })}
+            </p>
+            <h1
+              className="mt-1 text-[28px] font-bold text-[#111827] leading-tight"
+              style={{ fontWeight: 700 }}
+            >
+              Hello, {user?.name?.split(" ")[0] || "Viswanath"}
+            </h1>
+            <p
+              className="mt-0.5 text-[20px] font-semibold text-[#7C3AED]"
+              style={{ fontWeight: 600 }}
+            >
+              How can I help you today?
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            <Link
+              to="/projects"
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-[#7C3AED] px-4.5 py-2 text-[14px] font-medium text-white hover:bg-[#6D28D9] transition-colors shadow-sm select-none"
+              style={{ fontWeight: 500 }}
+            >
+              <Plus className="h-4 w-4" /> Create Design
+            </Link>
+            <Link
+              to="/designer"
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-4.5 py-2 text-[14px] font-medium text-[#111827] hover:bg-slate-50 transition-colors shadow-sm select-none"
+              style={{ fontWeight: 500 }}
+            >
+              <LayoutGrid className="h-4 w-4 text-[#111827]" /> Open Designer
+            </Link>
+            <Link
+              to="/designer"
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-[#7C3AED] px-4.5 py-2 text-[14px] font-medium text-white hover:bg-[#6D28D9] transition-colors shadow-sm select-none"
+              style={{ fontWeight: 500 }}
+            >
+              <Sparkles className="h-4 w-4" /> Ask AI ↗
+            </Link>
+          </div>
         </motion.div>
 
-        {/* KPI cards */}
+        {/* SECTION 2 — METRICS ROW */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map((k, i) => (
+          {metrics.map((m, i) => (
             <motion.div
-              key={k.label}
+              key={m.label}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
             >
-              <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_12px_rgba(15,23,42,0.06)] transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-[11px] font-semibold text-slate-500">
-                      {k.label}
-                    </div>
-                    <div className="mt-2 text-3xl font-black text-slate-900">{k.value}</div>
-                  </div>
-                  <div
-                    className="flex h-9 w-9 items-center justify-center rounded-xl"
-                    style={{ background: `${k.color}15` }}
-                  >
-                    <k.icon className="h-4 w-4" style={{ color: k.color }} />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-end justify-between">
-                  <span className={`text-[11px] font-semibold ${k.subColor || "text-slate-500"}`}>
-                    {k.sub}
+              <div className="bg-white rounded-xl border border-[#EEEFF2] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-5 flex flex-col justify-between relative h-full">
+                <div className="flex justify-between items-start">
+                  <span className="text-[13px] text-[#6B7280] font-medium" style={{ fontWeight: 500 }}>
+                    {m.label}
                   </span>
-                  <Sparkline points={k.spark} color={k.color} />
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: m.iconBg }}
+                  >
+                    <m.icon className="h-4 w-4" style={{ color: m.iconColor }} />
+                  </div>
                 </div>
-              </Card>
+                <div className="mt-1">
+                  <div
+                    className="text-[32px] font-bold text-[#111827] leading-none"
+                    style={{ fontWeight: 700 }}
+                  >
+                    {m.value}
+                  </div>
+                </div>
+                <div className="mt-4 flex items-end justify-between">
+                  <span className="text-[12px] text-[#6B7280] font-medium" style={{ fontWeight: 500 }}>
+                    {m.subtext}
+                  </span>
+                  <Sparkline points={m.sparkPoints} color={m.sparkColor} />
+                </div>
+              </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Row 2: projects / sim status / activity */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Recent Projects — live data */}
-          <Card className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-900">Recent Projects</h2>
-              <Link to="/projects" className="text-xs font-semibold text-accent hover:underline">View all</Link>
-            </div>
-            {projects.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-xs text-slate-400 font-semibold">No projects yet</p>
-                <Link to="/projects" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline">
-                  Create a project <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-            ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    <th className="pb-2 font-bold">Project</th>
-                    <th className="pb-2 font-bold">Qubits</th>
-                    <th className="pb-2 font-bold">Updated</th>
-                    <th className="pb-2 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.slice(0, 5).map(p => (
-                    <tr key={p.id} className="border-t border-slate-100">
-                      <td className="py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-accent-soft to-white border border-slate-200 flex items-center justify-center shrink-0">
-                            <Cpu className="h-3 w-3 text-accent" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-[12px] truncate max-w-[120px]">{p.name}</div>
-                            <div className="text-[10px] text-slate-400 capitalize">{p.topology.replace("-"," ")} · {p.target_frequency_ghz} GHz</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2.5 text-slate-700 font-semibold">{p.num_qubits || "—"}</td>
-                      <td className="py-2.5 text-slate-500 text-[10px]">{new Date(p.updated_at).toLocaleDateString()}</td>
-                      <td className="py-2.5">
-                        <Badge variant="outline" className={`rounded-full text-[9px] font-bold px-2 py-0.5 border ${STATUS_BADGE[p.status] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                          {p.status.replace("_"," ")}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            )}
-          </Card>
+        {/* SECTION 3 — TWO COLUMN ROW */}
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
+          {/* LEFT: Design Overview Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="h-full"
+          >
+            <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] h-full flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-[16px] font-semibold text-[#111827]"
+                    style={{ fontWeight: 600 }}
+                  >
+                    Design Overview
+                  </h2>
+                  <Link
+                    to="/layout-viewer"
+                    className="text-[13px] font-medium text-[#6366F1] hover:underline"
+                    style={{ fontWeight: 500 }}
+                  >
+                    View in Layout
+                  </Link>
+                </div>
 
-          {/* Simulation Status */}
-          <Card className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+                <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6 items-center">
+                  {/* SVG Topology Diagram (Left 40%) */}
+                  <div className="flex justify-center md:justify-start">
+                    <QubitTopology />
+                  </div>
+
+                  {/* Key-Value parameters list (Right 60%) */}
+                  <div className="space-y-3 text-[13px] text-[#111827]">
+                    {[
+                      { label: "Total Qubits", value: "8" },
+                      { label: "Couplers", value: "10" },
+                      { label: "Resonators", value: "8" },
+                      { label: "Readout Lines", value: "4" },
+                      { label: "Topology", value: "2x4 Lattice", icon: true },
+                      { label: "Substrate", value: "Silicon (Si)" },
+                    ].map((row, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between items-center pb-2.5 border-b border-[#EEEFF2] last:border-0 last:pb-0"
+                      >
+                        <span className="text-[#6B7280] font-medium" style={{ fontWeight: 500 }}>
+                          {row.label}
+                        </span>
+                        <span
+                          className="font-semibold text-[#111827] flex items-center gap-1.5"
+                          style={{ fontWeight: 600 }}
+                        >
+                          {row.value}
+                          {row.icon && (
+                            <svg width="14" height="12" viewBox="0 0 14 12" fill="none">
+                              <path
+                                d="M3.5 1L0.5 6L3.5 11H10.5L13.5 6L10.5 1H3.5Z"
+                                stroke="#7C3AED"
+                                strokeWidth="1.2"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* RIGHT: Recent Projects & Recent Activity Stack */}
+          <div className="flex flex-col gap-4">
+            {/* Recent Projects Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.25 }}
+            >
+              <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-[14px] font-semibold text-[#111827]"
+                    style={{ fontWeight: 600 }}
+                  >
+                    Recent Projects
+                  </h2>
+                  <Link
+                    to="/projects"
+                    className="text-[13px] font-medium text-[#6366F1] hover:underline"
+                    style={{ fontWeight: 500 }}
+                  >
+                    View all
+                  </Link>
+                </div>
+
+                {projects.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <p className="text-xs text-[#6B7280] font-semibold" style={{ fontWeight: 500 }}>
+                      No projects yet
+                    </p>
+                    <Link
+                      to="/projects"
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#7C3AED] hover:underline"
+                    >
+                      Create a project <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-[10px] uppercase tracking-wider text-[#6B7280] font-semibold">
+                          <th className="pb-2" style={{ fontWeight: 600 }}>
+                            Project
+                          </th>
+                          <th className="pb-2 text-right" style={{ fontWeight: 600 }}>
+                            Qubits
+                          </th>
+                          <th className="pb-2 text-right" style={{ fontWeight: 600 }}>
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {projects.slice(0, 3).map((p) => (
+                          <tr key={p.id} className="border-t border-[#EEEFF2]">
+                            <td className="py-2.5">
+                              <div>
+                                <div
+                                  className="font-semibold text-[#111827] text-[12px] truncate max-w-[150px]"
+                                  style={{ fontWeight: 600 }}
+                                >
+                                  {p.name}
+                                </div>
+                                <div className="text-[10px] text-[#6B7280] capitalize font-medium">
+                                  {p.topology.replace("-", " ")} · {p.target_frequency_ghz} GHz
+                                </div>
+                              </div>
+                            </td>
+                            <td
+                              className="py-2.5 text-right text-[#111827] font-medium"
+                              style={{ fontWeight: 500 }}
+                            >
+                              {p.num_qubits || "—"}
+                            </td>
+                            <td className="py-2.5 text-right">
+                              <Badge
+                                variant="outline"
+                                className={`rounded-full text-[9px] font-semibold px-2 py-0.5 border ${STATUS_BADGE[p.status] || "bg-slate-50 text-slate-600 border-slate-200"}`}
+                                style={{ fontWeight: 600 }}
+                              >
+                                {p.status.replace("_", " ")}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+
+            {/* Recent Activity Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-[14px] font-semibold text-[#111827]"
+                    style={{ fontWeight: 600 }}
+                  >
+                    Recent Activity
+                  </h2>
+                </div>
+
+                <div className="space-y-3">
+                  {ACTIVITY.slice(0, 3).map((a, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <div
+                        className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${a.color}`}
+                      >
+                        <a.icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span
+                            className="text-[12px] font-semibold text-[#111827] truncate"
+                            style={{ fontWeight: 600 }}
+                          >
+                            {a.title}
+                          </span>
+                          <span
+                            className="text-[10px] text-[#6B7280] shrink-0 font-medium"
+                            style={{ fontWeight: 500 }}
+                          >
+                            {a.time}
+                          </span>
+                        </div>
+                        <div
+                          className="text-[10px] text-[#6B7280] truncate font-medium"
+                          style={{ fontWeight: 500 }}
+                        >
+                          {a.sub}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* SECTION 4 — ADDITIONAL MAIN SECTIONS */}
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Simulation Status Card */}
+          <Card className="lg:col-span-4 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold text-slate-900">Simulation Status</h2>
-              <button className="text-xs font-semibold text-accent hover:underline">
+              <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Simulation Status</h2>
+              <Link to="/simulations" className="text-[13px] font-medium text-[#6366F1] hover:underline" style={{ fontWeight: 500 }}>
                 View all
-              </button>
+              </Link>
             </div>
             <div className="flex items-center justify-between">
               <Donut
@@ -366,116 +668,36 @@ function WorkspaceHomePage() {
                   <div key={s.n} className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full" style={{ background: s.c }} />
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{s.n}</span>
-                      <span className="text-[10px] text-slate-400">{s.v}</span>
+                      <span className="font-semibold text-[#111827]" style={{ fontWeight: 600 }}>{s.n}</span>
+                      <span className="text-[10px] text-[#6B7280] font-medium">{s.v}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <div className="flex justify-between text-[11px] mb-1.5">
-                <span className="text-slate-500 font-semibold">Compute Usage</span>
-                <span className="font-bold text-slate-900">85%</span>
+            <div className="mt-4 pt-4 border-t border-[#EEEFF2]">
+              <div className="flex justify-between text-[11px] mb-1.5 font-medium text-[#6B7280]">
+                <span>Compute Usage</span>
+                <span className="font-semibold text-[#111827]">85%</span>
               </div>
               <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-accent to-accent-2"
+                  className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#3B82F6]"
                   style={{ width: "85%" }}
                 />
               </div>
-              <div className="flex justify-between text-[10px] mt-1.5 text-slate-400">
+              <div className="flex justify-between text-[10px] mt-1.5 text-[#6B7280] font-medium">
                 <span>GPU Hours (This Week)</span>
-                <span className="font-semibold text-slate-600">342 / 400</span>
+                <span className="font-semibold text-[#111827]">342 / 400</span>
               </div>
             </div>
           </Card>
 
-          {/* Activity */}
-          <Card className="lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-900">Recent Activity</h2>
-              <button className="text-xs font-semibold text-accent hover:underline">
-                View all
-              </button>
-            </div>
-            <div className="space-y-3">
-              {ACTIVITY.map((a, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <div
-                    className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${a.color}`}
-                  >
-                    <a.icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[12px] font-bold text-slate-900 truncate">
-                        {a.title}
-                      </span>
-                      <span className="text-[10px] text-slate-400 shrink-0">{a.time}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 truncate">{a.sub}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Row 3: design overview / verification / quick actions / notifs */}
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Design Overview */}
-          <Card className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-900">Design Overview</h2>
-              <Link
-                to="/layout-viewer"
-                className="text-xs font-semibold text-accent hover:underline"
-              >
-                View in Layout
-              </Link>
-            </div>
-            <div className="flex gap-4">
-              <ChipSchematic />
-              <div className="flex-1 space-y-2.5 text-xs">
-                {[
-                  { l: "Total Qubits", v: "64" },
-                  { l: "Couplers", v: "112" },
-                  { l: "Resonators", v: "64" },
-                  { l: "Readout Lines", v: "16" },
-                  { l: "Topology", v: "Heavy Hex", icon: true },
-                ].map((row) => (
-                  <div
-                    key={row.l}
-                    className="flex justify-between items-center pb-2 border-b border-slate-100 last:border-0"
-                  >
-                    <span className="text-slate-500">{row.l}</span>
-                    <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                      {row.v}
-                      {row.icon && (
-                        <svg width="14" height="12" viewBox="0 0 14 12" fill="none">
-                          <path
-                            d="M3.5 1L0.5 6L3.5 11H10.5L13.5 6L10.5 1H3.5Z"
-                            stroke="#7C3AED"
-                            strokeWidth="1.2"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          {/* Verification Summary */}
-          <Card className="lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          {/* Verification Summary Card */}
+          <Card className="lg:col-span-4 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold text-slate-900">Verification Summary</h2>
-              <Link
-                to="/verification"
-                className="text-xs font-semibold text-accent hover:underline"
-              >
+              <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Verification Summary</h2>
+              <Link to="/verification" className="text-[13px] font-medium text-[#6366F1] hover:underline" style={{ fontWeight: 500 }}>
                 View all
               </Link>
             </div>
@@ -499,26 +721,26 @@ function WorkspaceHomePage() {
                 ].map((s) => (
                   <div key={s.n} className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.c }} />
-                    <span className="text-slate-600 w-12">{s.n}</span>
-                    <span className="font-bold text-slate-900">{s.v}</span>
+                    <span className="text-[#6B7280] font-medium w-12">{s.n}</span>
+                    <span className="font-semibold text-[#111827]">{s.v}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[10px] text-slate-400">Last checked: 1h ago</span>
+            <div className="mt-4 pt-3 border-t border-[#EEEFF2] flex items-center justify-between">
+              <span className="text-[10px] text-[#6B7280] font-medium">Last checked: 1h ago</span>
               <Button
                 size="sm"
-                className="h-8 rounded-lg bg-accent hover:bg-accent-2 text-white text-xs font-bold"
+                className="h-8 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-semibold px-3"
               >
                 Run Verification
               </Button>
             </div>
           </Card>
 
-          {/* Quick Actions */}
-          <Card className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-            <h2 className="text-sm font-bold text-slate-900 mb-4">Quick Actions</h2>
+          {/* Quick Actions Card */}
+          <Card className="lg:col-span-2 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <h2 className="text-[14px] font-semibold text-[#111827] mb-4" style={{ fontWeight: 600 }}>Quick Actions</h2>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { icon: Plus, label: "New Project", to: "/projects" },
@@ -531,10 +753,10 @@ function WorkspaceHomePage() {
                 <Link
                   key={a.label}
                   to={a.to}
-                  className="aspect-square rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-accent-soft transition-colors flex flex-col items-center justify-center gap-1.5 text-center p-2"
+                  className="aspect-square rounded-xl border border-[#EEEFF2] bg-white hover:border-[#7C3AED] hover:bg-violet-50/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-center p-2"
                 >
-                  <a.icon className="h-4 w-4 text-accent" />
-                  <span className="text-[9px] font-bold text-slate-700 leading-tight">
+                  <a.icon className="h-4 w-4 text-[#7C3AED]" />
+                  <span className="text-[9px] font-semibold text-[#4B5563] leading-tight" style={{ fontWeight: 600 }}>
                     {a.label}
                   </span>
                 </Link>
@@ -542,11 +764,11 @@ function WorkspaceHomePage() {
             </div>
           </Card>
 
-          {/* Notifications */}
-          <Card className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          {/* Notifications Card */}
+          <Card className="lg:col-span-2 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-900">Notifications</h2>
-              <button className="text-xs font-semibold text-accent hover:underline">
+              <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Notifications</h2>
+              <button className="text-[13px] font-medium text-[#6366F1] hover:underline">
                 View all
               </button>
             </div>
@@ -559,11 +781,11 @@ function WorkspaceHomePage() {
                     <n.icon className="h-3 w-3" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold text-slate-900 leading-tight">
+                    <div className="text-[11px] font-semibold text-[#111827] leading-tight" style={{ fontWeight: 600 }}>
                       {n.title}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{n.sub}</div>
-                    <div className="text-[9px] text-slate-300 mt-0.5">{n.time}</div>
+                    <div className="text-[10px] text-[#6B7280] font-medium mt-0.5">{n.sub}</div>
+                    <div className="text-[9px] text-[#9CA3AF] mt-0.5">{n.time}</div>
                   </div>
                 </div>
               ))}
@@ -571,11 +793,11 @@ function WorkspaceHomePage() {
           </Card>
         </div>
 
-        {/* Recent Simulations */}
-        <Card className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        {/* SECTION 5 — RECENT SIMULATIONS TABLE */}
+        <Card className="mt-4 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-slate-900">Recent Simulations</h2>
-            <Link to="/simulations" className="text-xs font-semibold text-accent hover:underline">
+            <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Recent Simulations</h2>
+            <Link to="/simulations" className="text-[13px] font-medium text-[#6366F1] hover:underline" style={{ fontWeight: 500 }}>
               View all
             </Link>
           </div>
@@ -602,13 +824,13 @@ function WorkspaceHomePage() {
                 key={s.name}
                 className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                <span className="text-xs font-bold text-slate-900 flex-1">{s.name}</span>
+                <span className="text-xs font-semibold text-[#111827] flex-1" style={{ fontWeight: 600 }}>{s.name}</span>
                 <StatusBadge status={s.status} />
-                <span className="text-xs text-slate-500 w-16 text-right">{s.time}</span>
-                <span className="text-xs text-slate-500 w-24 text-right">{s.type}</span>
-                <span className="text-xs text-slate-500 w-20 text-right">{s.usage}</span>
-                <span className="text-xs text-slate-500 w-20 text-right">{s.runtime}</span>
-                <button className="ml-3 text-slate-400 hover:text-accent">
+                <span className="text-xs text-[#6B7280] font-medium w-16 text-right">{s.time}</span>
+                <span className="text-xs text-[#6B7280] font-medium w-24 text-right">{s.type}</span>
+                <span className="text-xs text-[#6B7280] font-medium w-20 text-right">{s.usage}</span>
+                <span className="text-xs text-[#6B7280] font-medium w-20 text-right">{s.runtime}</span>
+                <button className="ml-3 text-slate-400 hover:text-[#7C3AED]">
                   <Download className="h-4 w-4" />
                 </button>
               </div>
@@ -617,73 +839,5 @@ function WorkspaceHomePage() {
         </Card>
       </div>
     </div>
-  );
-}
-
-// Heavy-hex inspired qubit chip schematic
-function ChipSchematic() {
-  const positions: { id: string; x: number; y: number }[] = [];
-  const rows = 4,
-    cols = 5;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const offset = r % 2 === 0 ? 0 : 22;
-      positions.push({ id: `Q${r * cols + c + 1}`, x: 30 + c * 44 + offset, y: 30 + r * 40 });
-    }
-  }
-  return (
-    <svg
-      viewBox="0 0 260 200"
-      className="w-[240px] h-[180px] rounded-lg border border-slate-100 bg-slate-50/60"
-    >
-      {/* connections */}
-      {positions.map((p, i) =>
-        positions.slice(i + 1).map((q) => {
-          const d = Math.hypot(p.x - q.x, p.y - q.y);
-          if (d < 50)
-            return (
-              <line
-                key={`${p.id}-${q.id}`}
-                x1={p.x}
-                y1={p.y}
-                x2={q.x}
-                y2={q.y}
-                stroke="#7C3AED"
-                strokeWidth="1"
-                opacity="0.35"
-              />
-            );
-          return null;
-        }),
-      )}
-      {/* readout lines on edges */}
-      {[0, cols, cols * 2, cols * 3].map((idx) => (
-        <line
-          key={idx}
-          x1={10}
-          y1={positions[idx]?.y || 0}
-          x2={positions[idx]?.x || 0}
-          y2={positions[idx]?.y || 0}
-          stroke="#D97706"
-          strokeWidth="1.5"
-        />
-      ))}
-      {/* qubits */}
-      {positions.map((p) => (
-        <g key={p.id}>
-          <circle cx={p.x} cy={p.y} r="9" fill="#fff" stroke="#7C3AED" strokeWidth="1.5" />
-          <text
-            x={p.x}
-            y={p.y + 3}
-            textAnchor="middle"
-            fontSize="7"
-            fontWeight="700"
-            fill="#7C3AED"
-          >
-            {p.id}
-          </text>
-        </g>
-      ))}
-    </svg>
   );
 }
