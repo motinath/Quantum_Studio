@@ -188,7 +188,8 @@ interface LayoutCanvasProps {
 
 function LayoutCanvas({
   layers, layoutData, onSelectComponent, selectedId,
-  showGrid, showRuler, zoom, setZoom, pan, setPan,
+  showGrid, showRuler, onShowGridChange, onShowRulerChange,
+  zoom, setZoom, pan, setPan,
 }: LayoutCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -664,17 +665,17 @@ function LayoutCanvas({
           <button onClick={() => onShowGridChange(!showGrid)} className="flex items-center gap-1.5 cursor-pointer group">
             <span className="text-[11px] text-slate-400 group-hover:text-slate-700 transition-colors">Grid</span>
             <div className="relative inline-flex h-4 w-7 items-center rounded-full transition-colors"
-              style={{ backgroundColor: showGrid ? "#8b5cf6" : "#cbd5e1" }}>
+               style={{ backgroundColor: showGrid ? "#8b5cf6" : "#cbd5e1" }}>
               <span className="inline-block h-3 w-3 rounded-full bg-white transition-transform shadow"
-                style={{ transform: showGrid ? "translateX(14px)" : "translateX(2px)" }} />
+                 style={{ transform: showGrid ? "translateX(14px)" : "translateX(2px)" }} />
             </div>
           </button>
           <button onClick={() => onShowRulerChange(!showRuler)} className="flex items-center gap-1.5 cursor-pointer group">
             <span className="text-[11px] text-slate-400 group-hover:text-slate-700 transition-colors">Ruler</span>
             <div className="relative inline-flex h-4 w-7 items-center rounded-full transition-colors"
-              style={{ backgroundColor: showRuler ? "#8b5cf6" : "#cbd5e1" }}>
+               style={{ backgroundColor: showRuler ? "#8b5cf6" : "#cbd5e1" }}>
               <span className="inline-block h-3 w-3 rounded-full bg-white transition-transform shadow"
-                style={{ transform: showRuler ? "translateX(14px)" : "translateX(2px)" }} />
+                 style={{ transform: showRuler ? "translateX(14px)" : "translateX(2px)" }} />
             </div>
           </button>
           <div className="flex items-center gap-1 bg-white/80 border border-slate-300/50 rounded-md px-2 py-0.5 cursor-pointer">

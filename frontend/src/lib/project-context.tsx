@@ -17,6 +17,7 @@ import {
   createProject,
   saveDesignToProject,
   updateProject,
+  fetchHealth,
 } from "@/lib/api/backend";
 
 interface ProjectContextProps {
@@ -72,7 +73,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         if (found) _setActiveProject(found);
       }
     } catch {
-      setBackendOnline(false);
+      try {
+        const health = await fetchHealth();
+        setBackendOnline(health && health.status === "online");
+      } catch {
+        setBackendOnline(false);
+      }
     }
   }, []);
 
