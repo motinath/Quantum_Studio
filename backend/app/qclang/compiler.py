@@ -235,7 +235,7 @@ def run_drc(
 
 # ── Qiskit Metal code generation ─────────────────────────────────────────────
 
-def generate_qiskit_code(chip: ChipNode, placement: dict[str, Any], material: str = "aluminum", chip_size_mm: float = 10.0) -> str:
+def generate_qiskit_code(chip: ChipNode, placement: dict[str, Any], material: str = "aluminum") -> str:
     lines = [
         "# ── SILICOFELLER Quantum Studio — QCLang-compiled Qiskit Metal script ──",
         f"# Chip: {chip.name}",
@@ -249,8 +249,8 @@ def generate_qiskit_code(chip: ChipNode, placement: dict[str, Any], material: st
         "",
         "design = designs.DesignPlanar()",
         "design.overwrite_enabled = True",
-        f"design.chips.main.size['size_x'] = '{chip_size_mm}mm'",
-        f"design.chips.main.size['size_y'] = '{chip_size_mm}mm'",
+        f"design.chips.main.size['size_x'] = '10mm'",
+        f"design.chips.main.size['size_y'] = '10mm'",
         "",
     ]
 
@@ -276,8 +276,8 @@ def generate_qiskit_code(chip: ChipNode, placement: dict[str, Any], material: st
         var_name = f"route_{c.qubit_a.lower()}_{c.qubit_b.lower()}"
         lines.append(f"{var_name} = RouteMeander(design, 'CPW_{c.qubit_a}_{c.qubit_b}', options=dict(")
         lines.append(f"    pin_inputs=dict(")
-        lines.append(f"        start_pin=dict(component='{c.qubit_a}', pin='bus_a'),")
-        lines.append(f"        end_pin=dict(component='{c.qubit_b}', pin='bus_b'),")
+        lines.append(f"        start_pin=dict(component='{c.qubit_a}', pin='readout'),")
+        lines.append(f"        end_pin=dict(component='{c.qubit_b}', pin='readout'),")
         lines.append(f"    ),")
         lines.append( "    fillet='90um',")
         lines.append( "    total_length='7.8mm',")
@@ -315,7 +315,7 @@ def compile_program(
     freq_plan = compute_frequency_plan(chip, target_freq_ghz, substrate, metal)
     placement = compute_placement(chip, topology)
     drc = run_drc(chip, placement, chip_size_mm)
-    code = generate_qiskit_code(chip, placement, metal, chip_size_mm)
+    code = generate_qiskit_code(chip, placement, metal)
 
     return {
         "label": f"{chip.name} · {chip.num_qubits}Q",

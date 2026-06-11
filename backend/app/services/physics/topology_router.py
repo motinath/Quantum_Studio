@@ -103,71 +103,24 @@ def _build_logical_graph(n: int, topology: str):
                                       label=f"star_arm_{i}"))
 
     elif topology in ("heavy_hex", "heavy-hex"):
-        # IBM-style heavy-hex: two rows of "heavy" (degree-3) qubits
-        # connected by degree-2 bridge qubits on alternating cross-links.
-        #
-        # Layout (example n=12):
-        #   Top row:     H0 — H1 — H2 — H3
-        #                |         |
-        #   Bridges:     B0        B1
-        #                |         |
-        #   Bot row:     H4 — H5 — H6 — H7
-        #                     |         |
-        #   Bridges:          B2        B3
-        #                     |         |
-        #                    (wraps or terminates)
-        #
-        # Cross-links alternate: even columns from top, odd from bottom.
+        # IBM heavy-hex: two rows, alternating vertical links
+        cols_top = math.ceil(n / 2)
+        cols_bot = n - cols_top
+        top = [f"Q{i+1}" for i in range(cols_top)]
+        bot = [f"Q{i+cols_top+1}" for i in range(cols_bot)]
 
-        # Partition qubits into heavy (degree-3) nodes and bridge (degree-2) nodes.
-        # Number of heavy nodes in each row: roughly n * 2/3 split across two rows.
-        # Number of bridges: the remaining qubits.
-        cols_per_row = max(2, math.ceil(n / 3))  # heavy nodes per row
-        n_heavy_top = min(cols_per_row, n)
-        n_heavy_bot = min(cols_per_row, max(0, n - n_heavy_top))
-        n_bridges = max(0, n - n_heavy_top - n_heavy_bot)
-
-        idx = 1  # 1-indexed qubit naming
-        top_row = [f"Q{idx + i}" for i in range(n_heavy_top)]
-        idx += n_heavy_top
-        bot_row = [f"Q{idx + i}" for i in range(n_heavy_bot)]
-        idx += n_heavy_bot
-        bridges = [f"Q{idx + i}" for i in range(n_bridges)]
-
-        # Horizontal coupling within top row
-        for i in range(len(top_row) - 1):
-            G.add_edge(top_row[i], top_row[i + 1])
-            edges.append(CouplingEdge(top_row[i], "a", top_row[i + 1], "c",
+        for i in range(len(top) - 1):
+            G.add_edge(top[i], top[i+1])
+            edges.append(CouplingEdge(top[i], "a", top[i+1], "c",
                                       label=f"hex_top_{i}"))
-
-        # Horizontal coupling within bottom row
-        for i in range(len(bot_row) - 1):
-            G.add_edge(bot_row[i], bot_row[i + 1])
-            edges.append(CouplingEdge(bot_row[i], "a", bot_row[i + 1], "c",
+        for i in range(len(bot) - 1):
+            G.add_edge(bot[i], bot[i+1])
+            edges.append(CouplingEdge(bot[i], "a", bot[i+1], "c",
                                       label=f"hex_bot_{i}"))
-
-        # Cross-links with bridge qubits (alternating columns)
-        bridge_idx = 0
-        for i in range(min(len(top_row), len(bot_row))):
-            # Even columns link from top row, odd from bottom — alternating
-            if i % 2 == 0 and bridge_idx < len(bridges):
-                b = bridges[bridge_idx]
-                G.add_edge(top_row[i], b)
-                G.add_edge(b, bot_row[i])
-                edges.append(CouplingEdge(top_row[i], "b", b, "c",
-                                          label=f"hex_bridge_{bridge_idx}_top"))
-                edges.append(CouplingEdge(b, "a", bot_row[i], "b",
-                                          label=f"hex_bridge_{bridge_idx}_bot"))
-                bridge_idx += 1
-            elif i % 2 == 1 and bridge_idx < len(bridges):
-                b = bridges[bridge_idx]
-                G.add_edge(bot_row[i], b)
-                G.add_edge(b, top_row[i])
-                edges.append(CouplingEdge(bot_row[i], "b", b, "c",
-                                          label=f"hex_bridge_{bridge_idx}_bot"))
-                edges.append(CouplingEdge(b, "a", top_row[i], "b",
-                                          label=f"hex_bridge_{bridge_idx}_top"))
-                bridge_idx += 1
+        for i in range(min(len(top), len(bot))):
+            G.add_edge(top[i], bot[i])
+            edges.append(CouplingEdge(top[i], "b", bot[i], "b",
+                                      label=f"hex_link_{i}"))
 
     else:  # grid (default)
         cols = max(2, math.ceil(math.sqrt(n)))

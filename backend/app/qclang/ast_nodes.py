@@ -23,8 +23,6 @@ class QubitNode:
     attributes: list[Attribute] = field(default_factory=list)
 
     def get(self, key: str, default: Any = None) -> Any:
-        if key == "type":
-            return self.qubit_type
         for a in self.attributes:
             if a.key == key:
                 return a.value

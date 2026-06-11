@@ -13,7 +13,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models import Project, ProjectStatus, User, Version
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -129,7 +129,7 @@ async def update_project(
 
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(project, field, value)
-    project.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    project.updated_at = datetime.utcnow()
 
     return _project_out(project)
 
@@ -167,7 +167,7 @@ async def save_design(
     project.design_payload = body
     project.num_qubits = body.get("num_qubits", project.num_qubits)
     project.topology = body.get("topology", project.topology)
-    project.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    project.updated_at = datetime.utcnow()
 
     return {"saved": True}
 

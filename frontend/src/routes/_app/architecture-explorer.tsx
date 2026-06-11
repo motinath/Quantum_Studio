@@ -1,922 +1,691 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { motion } from "motion/react";
-import { useState, useMemo, useCallback } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import ReactFlow, { Background, Controls, MiniMap, BaseEdge, EdgeLabelRenderer, getStraightPath, Handle, Position, useNodesState, useEdgesState, addEdge } from 'reactflow';
+import 'reactflow/dist/style.css';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Network, Cpu, Zap, RefreshCw, Download, Info, ChevronDown, ChevronUp, ChevronRight,
-  Layers, Save, FileText, Activity, CheckCircle2, AlertTriangle,
-  Lightbulb, ArrowRight, Settings2, Hexagon, Grid3x3, Minus,
-  CircleDot, Plus, BarChart3, Gauge, Radio, Thermometer,
-  Box, Wifi, Cable, BatteryCharging, Snowflake,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { generateChip } from "@/lib/api/backend";
-import { toast } from "sonner";
-import { useProject } from "@/lib/project-context";
-export interface GNode { id: number; x: number; y: number; }
-export type GEdge = [number, number];
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { RefreshCw, Download, Bookmark, Bell, Info, Maximize, Minimize } from "lucide-react";
 
 export const Route = createFileRoute("/_app/architecture-explorer")({
-  head: () => ({ meta: [{ title: "Architecture Explorer — Silicofeller" }] }),
   component: ArchitectureExplorerPage,
 });
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   TYPES
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-interface ArchConfig {
-  technology: string;
-  targetQubits: number;
-  topology: string;
-  qubitFrequency: number;
-  couplerType: string;
-  levelOfDetail: string;
-}
-
-interface ArchScores {
-  architectureScore: number;
-  scalabilityScore: number;
-  connectivityScore: number;
-  complexityScore: number;
-  fidelityScore: number;
-  efficiencyScore: number;
-  simplicityScore: number;
-}
-
-interface ArchResult {
-  totalQubits: number;
-  couplers: number;
-  readoutResonators: number;
-  chipArea: number;
-  controlLines: number;
-  fidelity: number;
-  scores: ArchScores;
-  t1Coherence: number;
-  t2Coherence: number;
-  crosstalk: number;
-  routingComplexity: number;
-  fabricationDifficulty: number;
-  estimatedYield: number;
-  powerConsumption: number;
-  errorRate: number;
-  recommendations: { text: string; type: "success" | "warning" | "info" }[];
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   CONSTANTS — technology / topology / coupler tables
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-const TECHNOLOGIES = [
-  { id: "transmon", name: "Transmon", chipAreaPerQubit: 0.12, baseFidelity: 99.2, powerPerQubit: 0.02, coolingPerQubit: 0.01047, coherenceFactor: 1.0 },
-  { id: "silicon-spin", name: "Silicon Spin", chipAreaPerQubit: 0.04, baseFidelity: 98.8, powerPerQubit: 0.008, coolingPerQubit: 0.005, coherenceFactor: 0.9 },
-  { id: "trapped-ion", name: "Trapped Ion", chipAreaPerQubit: 0.08, baseFidelity: 99.5, powerPerQubit: 0.05, coolingPerQubit: 0.002, coherenceFactor: 1.0 },
-  { id: "photonic", name: "Photonic", chipAreaPerQubit: 0.08, baseFidelity: 98.5, powerPerQubit: 0.03, coolingPerQubit: 0.001, coherenceFactor: 1.1 },
-  { id: "fluxonium", name: "Fluxonium", chipAreaPerQubit: 0.18, baseFidelity: 99.5, powerPerQubit: 0.025, coolingPerQubit: 0.012, coherenceFactor: 1.2 },
-] as const;
-
-const TOPOLOGY_IMPACT: Record<string, { complexityFactor: number, areaMultiplier: number, fidelityBonus: number }> = {
-  "line": { complexityFactor: 1.0, areaMultiplier: 1.0, fidelityBonus: 0.0 },
-  "circular": { complexityFactor: 1.15, areaMultiplier: 1.10, fidelityBonus: 0.0 },
-  "square-grid": { complexityFactor: 1.30, areaMultiplier: 1.25, fidelityBonus: 0.0 },
-  "heavy-hex": { complexityFactor: 1.40, areaMultiplier: 1.35, fidelityBonus: 0.2 },
-  "custom": { complexityFactor: 1.20, areaMultiplier: 1.15, fidelityBonus: 0.0 }
+// --- PHYSICS ENGINE DATA ---
+const TECH_METADATA: Record<string, any> = {
+  "transmon": { coherenceTime: 120, baseFidelity: 99.2, qubitArea: 0.08, coolingPerQubit: 0.010, controlLinesPerQubit: 2, readoutLinesPerQubit: 1, gateTime: "200 ns", symbol: "□", color: "#8b5cf6" },
+  "fluxonium": { coherenceTime: 350, baseFidelity: 99.7, qubitArea: 0.12, coolingPerQubit: 0.018, controlLinesPerQubit: 3, readoutLinesPerQubit: 1, gateTime: "300 ns", symbol: "◯", color: "#ec4899" },
+  "xmon": { coherenceTime: 110, baseFidelity: 99.1, qubitArea: 0.09, coolingPerQubit: 0.011, controlLinesPerQubit: 2, readoutLinesPerQubit: 1, gateTime: "250 ns", symbol: "✚", color: "#3b82f6" },
+  "flux-qubit": { coherenceTime: 40, baseFidelity: 99.1, qubitArea: 0.05, coolingPerQubit: 0.020, controlLinesPerQubit: 2, readoutLinesPerQubit: 1, gateTime: "400 ns", symbol: "⊙", color: "#f59e0b" },
+  "charge-qubit": { coherenceTime: 5, baseFidelity: 95.0, qubitArea: 0.01, coolingPerQubit: 0.005, controlLinesPerQubit: 1, readoutLinesPerQubit: 1, gateTime: "500 ns", symbol: "◇", color: "#ef4444" },
+  "phase-qubit": { coherenceTime: 10, baseFidelity: 98.0, qubitArea: 0.02, coolingPerQubit: 0.010, controlLinesPerQubit: 1, readoutLinesPerQubit: 1, gateTime: "450 ns", symbol: "△", color: "#10b981" },
+  "gatemon": { coherenceTime: 20, baseFidelity: 98.5, qubitArea: 0.04, coolingPerQubit: 0.008, controlLinesPerQubit: 1, readoutLinesPerQubit: 1, gateTime: "200 ns", symbol: "⬢", color: "#14b8a6" }
 };
 
-const TOPOLOGIES = [
-  { id: "heavy-hex", name: "Heavy Hex" },
-  { id: "square-grid", name: "Square Grid" },
-  { id: "line", name: "Line" },
-  { id: "circular", name: "Circular" },
-  { id: "custom", name: "Custom" },
-] as const;
-
-const COUPLER_TYPES = [
-  { id: "fixed", name: "Fixed", fidelityBonus: 0, dcFluxFactor: 1.5, controlMul: 1.0 },
-  { id: "tunable", name: "Tunable", fidelityBonus: 0.3, dcFluxFactor: 2.5, controlMul: 1.2 },
-  { id: "resonator", name: "Resonator-Mediated", fidelityBonus: 0.1, dcFluxFactor: 1.0, controlMul: 1.05 },
-] as const;
-
-
-const DETAIL_LEVELS = ["Minimal", "Balanced", "Detailed"] as const;
-
-const TEMPLATES = [
-  { id: "heavy-hex", topology: "heavy-hex", label: "Heavy Hex", sub: "IBM style", icon: Hexagon, color: "violet" },
-  { id: "square-grid", topology: "square-grid", label: "Square Grid", sub: "Google style", icon: Grid3x3, color: "blue" },
-  { id: "line", topology: "line", label: "Line", sub: "Linear chain", icon: Minus, color: "amber" },
-  { id: "circular", topology: "circular", label: "Circular", sub: "Ring topology", icon: CircleDot, color: "emerald" },
-  { id: "custom", topology: "custom", label: "Custom", sub: "Build your own", icon: Plus, color: "slate" },
-] as const;
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   COMPUTATION ENGINE — all metrics derived from inputs
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function computeArchitecture(config: ArchConfig): ArchResult {
-  const { technology, targetQubits, topology, qubitFrequency, couplerType } = config;
-  const tech = TECHNOLOGIES.find(t => t.id === technology) || TECHNOLOGIES[0];
-  const topo = TOPOLOGY_IMPACT[topology] || TOPOLOGY_IMPACT["custom"];
-  const coup = COUPLER_TYPES.find(c => c.id === couplerType) || COUPLER_TYPES[0];
-
-  const couplers = Math.floor(targetQubits * topo.complexityFactor);
-  const readoutResonators = targetQubits;
-
-  const area = targetQubits * tech.chipAreaPerQubit * topo.areaMultiplier;
-  const controls = Math.floor(targetQubits * coup.controlMul * 1.5);
-
-  return {
-    totalQubits: targetQubits,
-    couplers,
-    readoutResonators,
-    chipArea: parseFloat(area.toFixed(2)),
-    controlLines: controls,
-    fidelity: parseFloat((tech.baseFidelity + topo.fidelityBonus + coup.fidelityBonus).toFixed(2)),
-    scores: {
-      architectureScore: 85,
-      scalabilityScore: 80,
-      connectivityScore: 75,
-      complexityScore: 60,
-      fidelityScore: 90,
-      efficiencyScore: 70,
-      simplicityScore: 65,
-    },
-    t1Coherence: 150 * tech.coherenceFactor,
-    t2Coherence: 120 * tech.coherenceFactor,
-    crosstalk: 2.5,
-    routingComplexity: 3.2,
-    fabricationDifficulty: 75,
-    estimatedYield: 65,
-    powerConsumption: targetQubits * tech.powerPerQubit,
-    errorRate: 100 - tech.baseFidelity,
-    recommendations: [
-      { text: "Architecture looks stable.", type: "success" }
-    ]
-  };
-}
-
-function buildGraph(n: number, topo: string): { nodes: GNode[]; edges: GEdge[] } {
-  const nodes: GNode[] = [];
-  const edges: GEdge[] = [];
+// --- CUSTOM REACT FLOW NODES ---
+const CustomQubitNode = ({ data }: any) => {
+  const meta = TECH_METADATA[data.technology] || TECH_METADATA['transmon'];
   
-  if (topo === "line") {
-    for (let i = 0; i < n; i++) {
-      nodes.push({ id: i, x: 50 + i * 40, y: 100 });
-      if (i > 0) edges.push([i - 1, i]);
+  return (
+    <div style={{ background: 'transparent', border: `2px solid ${meta.color}`, borderRadius: '8px', padding: '10px', textAlign: 'center', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Handle type="target" position={Position.Top} style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0 }} />
+      <span style={{ color: meta.color, fontWeight: 'bold', fontSize: '18px', zIndex: 10, textShadow: '0px 0px 4px rgba(255,255,255,0.8)' }}>{meta.symbol}</span>
+      <div style={{ position: 'absolute', top: -20, fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>{data.label}</div>
+    </div>
+  );
+};
+
+const CustomReadoutNode = () => (
+  <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'white', border: '2px solid #3b82f6', boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)' }}>
+    <Handle type="target" position={Position.Top} style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0 }} />
+    <Handle type="source" position={Position.Bottom} style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0 }} />
+  </div>
+);
+
+// --- CUSTOM REACT FLOW EDGES ---
+const CustomCouplerEdge = ({ id, sourceX, sourceY, targetX, targetY, style = {}, markerEnd, data }: any) => {
+  const [edgePath, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+  let path = edgePath;
+  let strokeDasharray = "none";
+  let color = data?.topology === 'heavy-hex' ? "#F59E0B" : "#cbd5e1";
+
+  if (data?.coupler === 'readout') color = "#60A5FA";
+  else if (data?.coupler === 'tunable') color = "#3b82f6";
+  else if (data?.coupler === 'flux-tunable') color = "#8b5cf6";
+  else if (data?.coupler === 'inductive') { color = "#10b981"; strokeDasharray = "5,5"; }
+  else if (data?.coupler === 'resonator-bus') color = "#f59e0b";
+  else if (data?.coupler === 'cross-resonance') { color = "#ef4444"; strokeDasharray = "10,5"; }
+
+  const strokeWidth = data?.coupler === 'readout' ? 1.5 : (data?.topology === 'heavy-hex' ? 1.5 : 2);
+
+  return (
+    <>
+      <BaseEdge path={path} markerEnd={markerEnd} style={{ ...style, stroke: color, strokeWidth, strokeDasharray }} />
+      {data?.coupler === 'resonator-bus' && (
+        <EdgeLabelRenderer>
+          <div style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`, background: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: 10, border: `1px solid ${color}`, color, fontWeight: 'bold', pointerEvents: 'none' }}>
+            R
+          </div>
+        </EdgeLabelRenderer>
+      )}
+      {data?.coupler === 'tunable' && (
+        <EdgeLabelRenderer>
+          <div style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`, color, fontSize: 14, pointerEvents: 'none' }}>◉</div>
+        </EdgeLabelRenderer>
+      )}
+      {data?.coupler === 'flux-tunable' && (
+        <EdgeLabelRenderer>
+          <div style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`, color, fontSize: 14, pointerEvents: 'none' }}>⊗</div>
+        </EdgeLabelRenderer>
+      )}
+      {data?.coupler === 'cross-resonance' && (
+        <EdgeLabelRenderer>
+          <div style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`, color, fontSize: 14, pointerEvents: 'none' }}>~&gt;</div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+};
+
+// --- TOPOLOGY GENERATION ALGORITHMS ---
+function generateArchitecture(technology: string, topology: string, coupler: string, numQubits: number) {
+  const nodes: any[] = [];
+  const edges: any[] = [];
+  
+  if (numQubits < 1) return { nodes, edges };
+
+  const spacing = 160;
+  
+  if (topology === 'linear') {
+    for (let i = 0; i < numQubits; i++) {
+      nodes.push({ id: `Q${i+1}`, position: { x: i * spacing, y: 0 }, data: { topology, label: `Q${i+1}`, technology }, type: 'qubit' });
     }
-  } else if (topo === "circular") {
-    const radius = Math.max(50, n * 8);
-    for (let i = 0; i < n; i++) {
-      const angle = (i / n) * 2 * Math.PI;
-      nodes.push({ id: i, x: 100 + radius + radius * Math.cos(angle), y: 100 + radius + radius * Math.sin(angle) });
-      edges.push([i, (i + 1) % n]);
+    for (let i = 0; i < numQubits - 1; i++) {
+      edges.push({ id: `e-Q${i+1}-Q${i+2}`, source: `Q${i+1}`, target: `Q${i+2}`, type: 'coupler', data: { topology, coupler } });
     }
-  } else if (topo === "square-grid") {
-    const cols = Math.ceil(Math.sqrt(n));
-    for (let i = 0; i < n; i++) {
-      const c = i % cols;
+  } else if (topology === 'ring') {
+    const r = Math.max(100, (numQubits * spacing) / (2 * Math.PI));
+    for (let i = 0; i < numQubits; i++) {
+      const angle = (i * 2 * Math.PI) / numQubits - Math.PI / 2;
+      nodes.push({ id: `Q${i+1}`, position: { x: r * Math.cos(angle), y: r * Math.sin(angle) }, data: { topology, label: `Q${i+1}`, technology }, type: 'qubit' });
+    }
+    for (let i = 0; i < numQubits; i++) {
+      edges.push({ id: `e-${i}`, source: `Q${i+1}`, target: `Q${((i + 1) % numQubits) + 1}`, type: 'coupler', data: { topology, coupler } });
+    }
+  } else if (topology === '2d-grid') {
+    const cols = Math.ceil(Math.sqrt(numQubits));
+    for (let i = 0; i < numQubits; i++) {
+      nodes.push({ id: `Q${i+1}`, position: { x: (i % cols) * spacing, y: Math.floor(i / cols) * spacing }, data: { topology, label: `Q${i+1}`, technology }, type: 'qubit' });
+    }
+    for (let i = 0; i < numQubits; i++) {
       const r = Math.floor(i / cols);
-      nodes.push({ id: i, x: 50 + c * 40, y: 50 + r * 40 });
-      if (c > 0) edges.push([i - 1, i]);
-      if (r > 0 && i - cols >= 0) edges.push([i - cols, i]);
+      const c = i % cols;
+      if (c + 1 < cols && i + 1 < numQubits) {
+        edges.push({ id: `eh-${i}`, source: `Q${i+1}`, target: `Q${i+2}`, type: 'coupler', data: { topology, coupler } });
+      }
+      if (r + 1 < Math.ceil(numQubits / cols) && i + cols < numQubits) {
+        edges.push({ id: `ev-${i}`, source: `Q${i+1}`, target: `Q${i+cols+1}`, type: 'coupler', data: { topology, coupler } });
+      }
+    }
+  } else if (topology === 'heavy-hex') {
+    const R = spacing * 0.6;
+    const W = Math.sqrt(3) * R;
+    const H = 1.5 * R;
+    const tempNodes = [];
+    for (let row = -10; row <= 10; row++) {
+      for (let col = -10; col <= 10; col++) {
+        const cx = col * W + (Math.abs(row) % 2 === 1 ? W / 2 : 0);
+        const cy = row * H;
+        for (let i = 0; i < 6; i++) {
+          const angle = Math.PI / 6 + (Math.PI / 3) * i;
+          tempNodes.push({ x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle), dist: Math.hypot(cx, cy) });
+        }
+      }
+    }
+    tempNodes.sort((a, b) => a.dist - b.dist);
+    const finalNodes: any[] = [];
+    for (const tn of tempNodes) {
+      let isDup = false;
+      for (const fn of finalNodes) {
+        if (Math.hypot(tn.x - fn.x, tn.y - fn.y) < 2) {
+          isDup = true; break;
+        }
+      }
+      if (!isDup && finalNodes.length < numQubits) {
+        finalNodes.push({ x: tn.x, y: tn.y });
+      }
+    }
+    finalNodes.forEach((n1, i) => {
+      nodes.push({ id: `Q${i+1}`, position: { x: n1.x, y: n1.y }, data: { topology, label: `Q${i+1}`, technology }, type: 'qubit' });
+    });
+    for (let i = 0; i < finalNodes.length; i++) {
+      for (let j = i + 1; j < finalNodes.length; j++) {
+        const dist = Math.hypot(finalNodes[i].x - finalNodes[j].x, finalNodes[i].y - finalNodes[j].y);
+        if (dist > R * 0.9 && dist < R * 1.1) {
+          edges.push({ id: `e-${i}-${j}`, source: `Q${i+1}`, target: `Q${j+1}`, type: 'coupler', data: { topology, coupler } });
+        }
+      }
+    }
+  } else if (topology === 'all-to-all') {
+    const r = Math.max(100, (numQubits * spacing) / (2 * Math.PI));
+    for (let i = 0; i < numQubits; i++) {
+      const angle = (i * 2 * Math.PI) / numQubits - Math.PI / 2;
+      nodes.push({ id: `Q${i+1}`, position: { x: r * Math.cos(angle), y: r * Math.sin(angle) }, data: { topology, label: `Q${i+1}`, technology }, type: 'qubit' });
+    }
+    for (let i = 0; i < numQubits; i++) {
+      for (let j = i + 1; j < numQubits; j++) {
+        edges.push({ id: `e-${i}-${j}`, source: `Q${i+1}`, target: `Q${j+1}`, type: 'coupler', data: { topology, coupler } });
+      }
     }
   } else {
-    // Heavy-hex or custom (approximate heavy-hex via hexagonal lattice subset)
-    const cols = Math.ceil(Math.sqrt(n));
-    const hexRadius = 25;
-    const xOffset = hexRadius * Math.sqrt(3);
-    const yOffset = hexRadius * 1.5;
-    
-    for (let i = 0; i < n; i++) {
-      const c = i % cols;
-      const r = Math.floor(i / cols);
-      const isShifted = c % 2 !== 0;
-      
-      const x = 50 + c * xOffset;
-      const y = 50 + r * yOffset * 2 + (isShifted ? yOffset : 0);
-      nodes.push({ id: i, x, y });
-      
-      if (r > 0 && i - cols >= 0) {
-         edges.push([i - cols, i]);
-      }
-      if (c > 0 && r > 0 && isShifted && i - cols - 1 >= 0) {
-         edges.push([i - cols - 1, i]);
-      }
-      if (c > 0 && !isShifted && i - 1 >= 0) {
-         edges.push([i - 1, i]);
-      }
+    for (let i = 0; i < numQubits; i++) {
+      nodes.push({ id: `Q${i+1}`, position: { x: Math.random() * 500 - 250, y: Math.random() * 500 - 250 }, data: { topology, label: `Q${i+1}`, technology }, type: 'qubit' });
+    }
+    for (let i = 0; i < numQubits; i++) {
+       const dists = nodes.map((n, j) => ({ j, d: Math.hypot(nodes[i].position.x - n.position.x, nodes[i].position.y - n.position.y) })).sort((a,b) => a.d - b.d);
+       if (dists[1]) edges.push({ id: `e-${i}-1`, source: `Q${i+1}`, target: `nodes[dists[1].j].id`, type: 'coupler', data: { topology, coupler } });
+       if (dists[2] && Math.random() > 0.5) edges.push({ id: `e-${i}-2`, source: `Q${i+1}`, target: `nodes[dists[2].j].id`, type: 'coupler', data: { topology, coupler } });
     }
   }
+
   return { nodes, edges };
-}/* ═══════════════════════════════════════════════════════════════════════════
-   SVG TOPOLOGY VISUALIZATION
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function TopologyGraph({ nodes, edges, n, accentColor = "#7C3AED" }: {
-  nodes: GNode[]; edges: GEdge[]; n: number; accentColor?: string;
-}) {
-  if (nodes.length === 0) return <div className="h-full flex items-center justify-center text-slate-400 text-sm">No qubits to display</div>;
-
-  const r = n > 200 ? 3 : n > 128 ? 4 : n > 64 ? 6 : n > 36 ? 8 : n > 16 ? 10 : 14;
-  const showLabels = n <= 64;
-  const showCouplerDots = n <= 128;
-  const fontSize = r < 6 ? 5 : r < 8 ? 6 : r < 10 ? 7 : 8;
-
-  const posMap: Record<number, GNode> = {};
-  nodes.forEach(nd => { posMap[nd.id] = nd; });
-
-  /* Calculate viewBox from node positions */
-  const xs = nodes.map(nd => nd.x);
-  const ys = nodes.map(nd => nd.y);
-  const vPad = 30;
-  const minX = Math.min(...xs) - vPad;
-  const minY = Math.min(...ys) - vPad;
-  const maxX = Math.max(...xs) + vPad;
-  const maxY = Math.max(...ys) + vPad;
-  const vw = Math.max(maxX - minX, 100);
-  const vh = Math.max(maxY - minY, 80);
-
-  return (
-    <svg
-      viewBox={`${minX} ${minY} ${vw} ${vh}`}
-      className="w-full h-full"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      {/* Grid pattern */}
-      <defs>
-        <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(148,163,184,0.08)" strokeWidth="0.5" />
-        </pattern>
-      </defs>
-      <rect x={minX} y={minY} width={vw} height={vh} fill="url(#grid)" />
-
-      {/* Edges */}
-      {edges.map(([a, b], i) => {
-        const p1 = posMap[a], p2 = posMap[b];
-        if (!p1 || !p2) return null;
-        return (
-          <line key={`e${i}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-            stroke="rgba(100,116,139,0.40)" strokeWidth={n > 100 ? 0.5 : 1} />
-        );
-      })}
-
-      {/* Coupler dots at edge midpoints */}
-      {showCouplerDots && edges.map(([a, b], i) => {
-        const p1 = posMap[a], p2 = posMap[b];
-        if (!p1 || !p2) return null;
-        return (
-          <circle key={`c${i}`} cx={(p1.x + p2.x) / 2} cy={(p1.y + p2.y) / 2}
-            r={Math.max(1.5, r * 0.25)} fill="#14B8A6" opacity={0.7} />
-        );
-      })}
-
-      {/* Qubit nodes */}
-      {nodes.map(nd => (
-        <g key={nd.id}>
-          <circle cx={nd.x} cy={nd.y} r={r} fill={accentColor} stroke="white" strokeWidth={r > 6 ? 1.5 : 0.5} opacity={0.9} />
-          {showLabels && (
-            <text x={nd.x} y={nd.y + fontSize * 0.35} textAnchor="middle"
-              fontSize={fontSize} fontWeight="700" fill="white" style={{ userSelect: "none" }}>
-              Q{nd.id + 1}
-            </text>
-          )}
-        </g>
-      ))}
-    </svg>
-  );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SCORE GAUGE — radial donut chart
-   ═══════════════════════════════════════════════════════════════════════════ */
+// --- METRICS ENGINE ---
+function computeMetrics(nodes: any[], edges: any[], tech: string, topology: string, coupler: string, freq: number, numQubits: number) {
+  const meta = TECH_METADATA[tech] || TECH_METADATA['transmon'];
+  const N = numQubits;
+  const numEdges = edges.length;
+  
+  const avgConn = N > 0 ? ((2 * numEdges) / N) : 0;
+  
+  const chipArea = (N * meta.qubitArea + numEdges * 0.05 + N * 0.02 + N * 0.01).toFixed(2);
+  
+  const sqFidelity = Math.min(99.99, meta.baseFidelity + (freq < 5 ? 0.05 : 0));
+  const tqFidelity = Math.min(99.99, meta.baseFidelity + (coupler === 'tunable' ? 0.2 : coupler === 'flux-tunable' ? 0.4 : 0) - (topology === 'all-to-all' ? 1.0 : 0) - (N > 50 ? 0.5 : 0));
+  const roFidelity = Math.max(90.0, meta.baseFidelity - 0.5);
+  
+  const qv = Math.floor(Math.min(1048576, Math.pow(2, Math.min(N, 15)) * (tqFidelity / 100)));
+  
+  const t1 = meta.coherenceTime;
+  const t2 = Math.floor(meta.coherenceTime * 0.7);
+  const errRate = (100 - tqFidelity).toFixed(2);
+  
+  let crosstalk = 'Medium';
+  if (topology === 'all-to-all' || (topology === 'heavy-hex' && coupler === 'fixed') || freq > 6) crosstalk = 'High';
+  else if (coupler === 'tunable' || coupler === 'flux-tunable' || topology === 'linear') crosstalk = 'Low';
+  
+  const dcFlux = (coupler === 'tunable' || coupler === 'flux-tunable') ? N : 0;
+  const totalPower = (N * 1.5 + numEdges * 0.5 + dcFlux * 0.2).toFixed(1);
+  const coolingLoad = (N * meta.coolingPerQubit * 1000).toFixed(1);
+  
+  let routing = 'Medium';
+  if (topology === 'all-to-all') routing = 'Very High';
+  else if (topology === 'heavy-hex') routing = 'Low';
+  else if (topology === 'grid') routing = 'Medium';
+  else if (topology === 'linear') routing = 'High';
+  
+  let scaleScore = 50;
+  if (topology === 'heavy-hex') scaleScore = 95;
+  else if (topology === 'grid') scaleScore = 80;
+  else if (topology === 'all-to-all') scaleScore = 10;
+  else if (topology === 'ring') scaleScore = 30;
+  
+  if (tech === 'transmon' || tech === 'gatemon') scaleScore += 5;
+  if (coupler === 'tunable') scaleScore += 5;
+  scaleScore = Math.min(100, Math.max(0, scaleScore));
+  
+  let ft = 'Moderate';
+  if (tqFidelity > 99.5 && (topology === 'grid' || topology === 'heavy-hex')) ft = 'Excellent';
+  else if (tqFidelity > 99.0) ft = 'Good';
+  else if (tqFidelity < 98.0) ft = 'Poor';
+  
+  let surfaceCode = 'Poor';
+  if (topology === 'grid' || topology === 'heavy-hex') surfaceCode = 'Excellent';
+  else if (topology === 'ring') surfaceCode = 'Moderate';
+  
+  const effScore = Math.floor(0.3 * tqFidelity + 0.2 * Math.min(100, avgConn * 20) + 0.15 * Math.min(100, t1) + 0.15 * scaleScore + 0.1 * 80 + 0.1 * (routing === 'Low' ? 100 : 50));
+  
+  const maxEdges = (N * (N - 1)) / 2;
+  const utilScore = maxEdges > 0 ? ((numEdges / maxEdges) * 100).toFixed(1) : "0.0";
+  
+  let ent = 'Medium';
+  if (avgConn > 3.5) ent = 'Very High';
+  else if (avgConn > 2.5) ent = 'High';
+  else if (avgConn < 1.5) ent = 'Low';
+  
+  let rank = "Research Prototype";
+  if (N > 100 && effScore > 85 && ft === 'Excellent') rank = "Fault-Tolerant Candidate";
+  else if (N > 40 && effScore > 75) rank = "Near-Term Quantum Processor";
+  else if (N > 10) rank = "Industrial Prototype";
+  
+  const warnings = [];
+  if (tqFidelity < 98) warnings.push("Fidelity critically low (< 98%).");
+  if (crosstalk === 'High') warnings.push("High crosstalk risk detected.");
+  if (parseFloat(coolingLoad) > 5000) warnings.push("Cooling load exceeds typical dilution refrigerator capacity.");
+  if (N * meta.controlLinesPerQubit > 1000) warnings.push("Control line count requires massive cabling overhead.");
+  if (topology === 'all-to-all' && N > 10) warnings.push("All-to-all topology is unroutable for large Qubit counts.");
+  if (tech === 'charge-qubit' && topology === 'heavy-hex') warnings.push("Charge qubits suffer high noise in hex configurations.");
 
-function ScoreGauge({ score, size = 110 }: { score: number; size?: number }) {
-  const strokeW = 8;
-  const radius = (size - strokeW) / 2;
-  const circ = 2 * Math.PI * radius;
-  const offset = circ - (score / 100) * circ;
-  const color = score >= 80 ? "#7C3AED" : score >= 60 ? "#F59E0B" : "#EF4444";
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none"
-          stroke="rgba(148,163,184,0.12)" strokeWidth={strokeW} />
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none"
-          stroke={color} strokeWidth={strokeW} strokeLinecap="round"
-          strokeDasharray={circ} strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 0.6s ease" }} />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-slate-900">{score}</span>
-        <span className="text-[9px] font-bold text-slate-400">/100</span>
-      </div>
-    </div>
-  );
+  return {
+    architectureSummary: { qubits: N, couplers: numEdges, averageConnectivity: avgConn.toFixed(1), chipArea },
+    performanceMetrics: { singleQubitFidelity: sqFidelity.toFixed(2), twoQubitFidelity: tqFidelity.toFixed(2), readoutFidelity: roFidelity.toFixed(2), gateTime: meta.gateTime, quantumVolume: qv },
+    reliabilityMetrics: { T1: t1, T2: t2, errorRate: errRate, crosstalkRisk: crosstalk },
+    resourceMetrics: { controlLines: N * meta.controlLinesPerQubit, readoutLines: N, dcFluxLines: dcFlux, totalPower, coolingLoad },
+    scalabilityMetrics: { routingComplexity: routing, scalabilityScore: scaleScore, faultToleranceReadiness: ft, surfaceCodeCompatibility: surfaceCode },
+    validationMetrics: { architectureEfficiencyScore: effScore, hardwareUtilizationScore: utilScore, entanglementCapability: ent, architectureRanking: rank },
+    warnings,
+    overallArchitectureScore: effScore
+  };
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SCORE BAR — horizontal progress bar for sub-scores
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function ScoreBar({ label, value }: { label: string; value: number }) {
-  const color = value >= 80 ? "bg-violet-500" : value >= 60 ? "bg-amber-500" : "bg-rose-500";
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] font-semibold text-slate-500 w-28 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-        <div className={cn("h-full rounded-full transition-all duration-500", color)} style={{ width: `${value}%` }} />
-      </div>
-      <span className="text-[10px] font-black text-slate-700 w-7 text-right">{value}</span>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   RESOURCE CARD with mini bar indicator
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function ResourceCard({ label, value, unit, max }: { label: string; value: number; unit: string; max: number }) {
-  const pct = Math.min(100, (value / max) * 100);
-  return (
-    <div className="rounded-xl border border-slate-200/70 bg-white p-3.5 shadow-sm">
-      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
-      <p className="text-base font-black text-slate-900 leading-tight">
-        {value < 1 ? value.toFixed(2) : value.toFixed(value >= 100 ? 0 : 2)}{" "}
-        <span className="text-[9px] font-bold text-slate-400">{unit}</span>
-      </p>
-      <div className="mt-2 h-1 rounded-full bg-slate-100 overflow-hidden">
-        <div className="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600 transition-all duration-500"
-          style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   MAIN PAGE COMPONENT
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function usePersistentState<T>(key: string, initialValue: T) {
-  const [state, setState] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue;
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
-
-  const setPersistentState = useCallback((value: T | ((val: T) => T)) => {
-    setState((prev) => {
-      const next = value instanceof Function ? value(prev) : value;
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch (err) {}
-      return next;
-    });
-  }, [key]);
-
-  return [state, setPersistentState] as const;
-}
-
+// --- MAIN PAGE ---
 function ArchitectureExplorerPage() {
-  /* ── State ──────────────────────────────────────────────────────────── */
-  const [technology, setTechnology] = usePersistentState("arch_technology", "transmon");
-  const [targetQubits, setTargetQubits] = usePersistentState("arch_targetQubits", 64);
-  const [qubitsInput, setQubitsInput] = usePersistentState("arch_qubitsInput", "64");
-  const [topology, setTopology] = usePersistentState("arch_topology", "heavy-hex");
-  const [qubitFrequency, setQubitFrequency] = usePersistentState("arch_qubitFrequency", 5.0);
-  const [freqInput, setFreqInput] = usePersistentState("arch_freqInput", "5.00");
-  const [couplerType, setCouplerType] = usePersistentState("arch_couplerType", "fixed");
-  const [levelOfDetail, setLevelOfDetail] = usePersistentState("arch_levelOfDetail", "Minimal");
-  const [showAdvanced, setShowAdvanced] = usePersistentState("arch_showAdvanced", false);
-  const [inputError, setInputError] = useState<string | null>(null);
+  const [technology, setTechnology] = useState(() => sessionStorage.getItem('arch-technology') || "transmon");
+  const [topology, setTopology] = useState(() => sessionStorage.getItem('arch-topology') || "heavy-hex");
+  const [coupler, setCoupler] = useState(() => sessionStorage.getItem('arch-coupler') || "fixed");
+  const [numQubits, setNumQubits] = useState(() => parseInt(sessionStorage.getItem('arch-numQubits') || "64"));
+  const [frequency, setFrequency] = useState(() => parseFloat(sessionStorage.getItem('arch-frequency') || "5.00"));
+  const [lod, setLod] = useState(() => sessionStorage.getItem('arch-lod') || "balanced");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  /* Advanced options (cosmetic for now) */
-  const [connectivity, setConnectivity] = usePersistentState("arch_connectivity", "Custom");
-  const [controlArch, setControlArch] = usePersistentState("arch_controlArch", "Multiplexed");
-  const [packaging, setPackaging] = usePersistentState("arch_packaging", "Flip-chip");
-  const [environment, setEnvironment] = usePersistentState("arch_environment", "10 mK");
+  useEffect(() => {
+    sessionStorage.setItem('arch-technology', technology);
+    sessionStorage.setItem('arch-topology', topology);
+    sessionStorage.setItem('arch-coupler', coupler);
+    sessionStorage.setItem('arch-numQubits', numQubits.toString());
+    sessionStorage.setItem('arch-frequency', frequency.toString());
+    sessionStorage.setItem('arch-lod', lod);
+  }, [technology, topology, coupler, numQubits, frequency, lod]);
 
-  /* ── Compute result from current state ──────────────────────────────── */
-  const config: ArchConfig = useMemo(() => ({
-    technology, targetQubits, topology, qubitFrequency, couplerType, levelOfDetail,
-  }), [technology, targetQubits, topology, qubitFrequency, couplerType, levelOfDetail]);
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => generateArchitecture(technology, topology, coupler, numQubits), [technology, topology, coupler, numQubits]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = usePersistentState("arch_lastUpdated", "Never");
-  const [result, setResult] = usePersistentState<ArchResult>("arch_result", computeArchitecture(config));
-  const [graph, setGraph] = usePersistentState<{ nodes: GNode[]; edges: GEdge[] }>("arch_graph", buildGraph(targetQubits, topology));
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  const scores = result.scores;
-  const recommendations = result.recommendations;
+  const onConnect = useCallback((params: any) => setEdges((eds) => addEdge({ ...params, type: 'coupler', data: { coupler } }, eds)), [coupler, setEdges]);
 
-  const navigate = useNavigate();
-  const { createAndActivate } = useProject();
+  const metrics = useMemo(() => computeMetrics(nodes, edges, technology, topology, coupler, frequency, numQubits), [nodes, edges, technology, topology, coupler, frequency, numQubits]);
 
-  const handleRecalculate = async () => {
-    setIsLoading(true);
-    try {
-      const response = await generateChip(`${targetQubits} qubit ${topology}`, "silicon", "aluminum");
-      
-      const newGraph = {
-        nodes: [] as GNode[],
-        edges: [] as GEdge[]
-      };
-      
-      if (response.placement && response.placement.qubits.length > 0) {
-        const qMap: Record<string, number> = {};
-        // Adjust coordinate scaling based on whether it's grid or offset
-        response.placement.qubits.forEach((q, i) => {
-          qMap[q.name] = i;
-          // Scale from backend mm representation to viewBox representation
-          // Using 50 + x * 20 to center and spread out the qubits
-          newGraph.nodes.push({ id: i, x: 100 + q.x * 25, y: 100 - q.y * 25 });
-        });
-        
-        if (response.placement.edges) {
-          response.placement.edges.forEach(e => {
-            if (qMap[e.qubit_a] !== undefined && qMap[e.qubit_b] !== undefined) {
-              newGraph.edges.push([qMap[e.qubit_a], qMap[e.qubit_b]]);
-            }
-          });
-        }
-      } else {
-         const fallback = buildGraph(targetQubits, topology);
-         newGraph.nodes = fallback.nodes;
-         newGraph.edges = fallback.edges;
-      }
-      
-      setGraph(newGraph);
-      setResult(computeArchitecture(config));
-      setLastUpdated(new Date().toLocaleTimeString());
-    } catch (e: any) {
-      toast.error(e.message || "Failed to generate circuit from backend");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSaveArchitecture = async () => {
-    try {
-      await createAndActivate({
-        name: `${targetQubits}Q ${topology}`,
-        num_qubits: targetQubits,
-        topology: topology,
-        target_frequency_ghz: qubitFrequency,
-        substrate_material: "silicon",
-        metal_layer: "aluminum"
-      });
-      toast.success("Architecture saved to project successfully!");
-      navigate({ to: "/projects" });
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save architecture");
-    }
-  };
-
-  const handleExportReport = () => {
-    const reportData = {
-      timestamp: new Date().toISOString(),
-      config,
-      metrics: result,
-      graph,
-    };
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `architecture_report_${targetQubits}q_${topology.toLowerCase().replace(" ", "_")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Report export completed.");
-  };
-
-  /* ── Handlers ───────────────────────────────────────────────────────── */
-  const handleQubitChange = useCallback((raw: string) => {
-    setQubitsInput(raw);
-    const num = parseInt(raw, 10);
-    if (isNaN(num)) { setInputError("Enter a valid number"); return; }
-    if (num < 1) { setInputError("Minimum 1 qubit"); return; }
-    if (num > 1000) { setInputError("Maximum 1000 qubits"); return; }
-    setInputError(null);
-    setTargetQubits(num);
-  }, []);
-
-  const handleFreqChange = useCallback((raw: string) => {
-    setFreqInput(raw);
-    const num = parseFloat(raw);
-    if (isNaN(num)) return;
-    setQubitFrequency(Math.max(1, Math.min(10, num)));
-  }, []);
-
-  const handleTemplateClick = useCallback((topo: string) => {
-    setTopology(topo);
-  }, []);
-
-  const configString = JSON.stringify(config);
-
-  /* ── Select styling helper ──────────────────────────────────────────── */
-  const selectCls = "h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-violet-400/40 focus:border-violet-400 cursor-pointer appearance-none";
-  const inputCls = "h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-violet-400/40 focus:border-violet-400 w-full";
-  const labelCls = "text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1";
+  const nodeTypes = useMemo(() => ({ qubit: CustomQubitNode, readout: CustomReadoutNode }), []);
+  const edgeTypes = useMemo(() => ({ coupler: CustomCouplerEdge }), []);
 
   return (
-    <div className="h-full overflow-y-auto bg-[#F7F8FA]">
-      <div className="mx-auto max-w-[1400px] px-5 py-5">
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="h-full overflow-y-auto bg-slate-50/50">
+      <div className="mx-auto max-w-[1500px] px-8 py-8 flex flex-col gap-6">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Quantum Simulator</h1>
+            <p className="text-sm text-slate-500 mt-1">Explore dynamically generated chip architectures and resource requirements.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="h-9 gap-2 text-slate-600 font-medium rounded-lg border-slate-200 shadow-sm" onClick={() => {
+              localStorage.setItem('saved-quantum-architecture', JSON.stringify({ technology, topology, coupler, numQubits, frequency }));
+              alert('Architecture configuration successfully saved!');
+            }}>
+              <Bookmark className="h-4 w-4" /> Save
+            </Button>
+            <Button variant="outline" className="h-9 gap-2 text-slate-600 font-medium rounded-lg border-slate-200 shadow-sm" onClick={() => {
+              const report = `# Quantum Architecture Report
 
-          {/* ─── Page Header ───────────────────────────────────────────── */}
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900">Architecture Explorer</h1>
-              <p className="text-xs text-slate-500 mt-0.5">Explore system architectures and estimate resources, connectivity, and performance.</p>
+## Configuration
+- Technology: ${technology}
+- Topology: ${topology}
+- Coupler: ${coupler}
+- Qubit Count: ${numQubits}
+- Target Frequency: ${frequency} GHz
+
+## Top 20 Recommended Metrics
+1. Total Qubits: ${metrics.architectureSummary?.qubits}
+2. Coupler Count: ${metrics.architectureSummary?.couplers}
+3. Connectivity Degree: ${metrics.architectureSummary?.averageConnectivity}
+4. Chip Area: ${metrics.architectureSummary?.chipArea} mm²
+5. Single-Qubit Fidelity: ${metrics.performanceMetrics?.singleQubitFidelity}%
+6. Two-Qubit Fidelity: ${metrics.performanceMetrics?.twoQubitFidelity}%
+7. Readout Fidelity: ${metrics.performanceMetrics?.readoutFidelity}%
+8. T1 Time: ${metrics.reliabilityMetrics?.T1} µs
+9. T2 Time: ${metrics.reliabilityMetrics?.T2} µs
+10. Error Rate: ${metrics.reliabilityMetrics?.errorRate}%
+11. Quantum Volume: ${metrics.performanceMetrics?.quantumVolume}
+12. Crosstalk Risk: ${metrics.reliabilityMetrics?.crosstalkRisk}
+13. Control Lines: ${metrics.resourceMetrics?.controlLines}
+14. Readout Lines: ${metrics.resourceMetrics?.readoutLines}
+15. Flux Lines: ${metrics.resourceMetrics?.dcFluxLines}
+16. Power Consumption: ${metrics.resourceMetrics?.totalPower} mW
+17. Cooling Load: ${metrics.resourceMetrics?.coolingLoad} µW
+18. Routing Complexity: ${metrics.scalabilityMetrics?.routingComplexity}
+19. Scalability Score: ${metrics.scalabilityMetrics?.scalabilityScore}/100
+20. Overall Architecture Score: ${metrics.overallArchitectureScore}/100
+`;
+              const blob = new Blob([report], { type: "text/markdown" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `quantum-architecture-report.md`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}>
+              <Download className="h-4 w-4" /> Export Report
+            </Button>
+          </div>
+        </div>
+
+        {/* Top Controls Bar */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex items-center justify-between gap-6">
+          <div className="flex-1 grid grid-cols-6 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500">Technology</label>
+              <Select value={technology} onValueChange={setTechnology}>
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 text-sm font-semibold text-slate-900 bg-slate-50/50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transmon">Transmon</SelectItem>
+                  <SelectItem value="flux-qubit">Flux Qubit</SelectItem>
+                  <SelectItem value="charge-qubit">Charge Qubit</SelectItem>
+                  <SelectItem value="phase-qubit">Phase Qubit</SelectItem>
+                  <SelectItem value="xmon">Xmon</SelectItem>
+                  <SelectItem value="fluxonium">Fluxonium</SelectItem>
+                  <SelectItem value="gatemon">Gatemon</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={handleSaveArchitecture} variant="outline" size="sm" className="h-8 rounded-lg text-[11px] font-bold gap-1.5 border-slate-200 cursor-pointer">
-                <Save className="h-3.5 w-3.5" /> Save Architecture
-              </Button>
-              <Button onClick={handleExportReport} variant="outline" size="sm" className="h-8 rounded-lg text-[11px] font-bold gap-1.5 border-slate-200 cursor-pointer">
-                <Download className="h-3.5 w-3.5" /> Export Report
-              </Button>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500">Target Qubits</label>
+              <Input type="number" value={numQubits} onChange={(e) => setNumQubits(Number(e.target.value) || 1)} className="h-9 rounded-xl border-slate-200 text-sm font-semibold text-slate-900 bg-slate-50/50" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">Topology <Info className="h-3.5 w-3.5 text-slate-400"/></label>
+              <Select value={topology} onValueChange={setTopology}>
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 text-sm font-semibold text-slate-900 bg-slate-50/50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="linear">Linear</SelectItem>
+                  <SelectItem value="ring">Ring</SelectItem>
+                  <SelectItem value="2d-grid">2D Grid</SelectItem>
+                  <SelectItem value="heavy-hex">Heavy-Hex</SelectItem>
+                  <SelectItem value="all-to-all">All-to-All</SelectItem>
+                  <SelectItem value="custom">Custom Graph</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">Qubit Frequency <Info className="h-3.5 w-3.5 text-slate-400"/></label>
+              <div className="relative">
+                <Input type="number" step="0.01" value={frequency} onChange={(e) => setFrequency(Number(e.target.value) || 0)} className="h-9 rounded-xl border-slate-200 text-sm font-semibold text-slate-900 bg-slate-50/50 pr-12" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">GHz</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">Coupler Type <Info className="h-3.5 w-3.5 text-slate-400"/></label>
+              <Select value={coupler} onValueChange={setCoupler}>
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 text-sm font-semibold text-slate-900 bg-slate-50/50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fixed</SelectItem>
+                  <SelectItem value="tunable">Tunable</SelectItem>
+                  <SelectItem value="flux-tunable">Flux-Tunable</SelectItem>
+                  <SelectItem value="resonator-bus">Resonator Bus</SelectItem>
+                  <SelectItem value="inductive">Inductive</SelectItem>
+                  <SelectItem value="cross-resonance">Cross-Resonance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">Level of Detail <Info className="h-3.5 w-3.5 text-slate-400"/></label>
+              <Select value={lod} onValueChange={setLod}>
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 text-sm font-semibold text-slate-900 bg-slate-50/50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="balanced">Balanced</SelectItem>
+                  <SelectItem value="detailed">Detailed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          <div className="flex flex-col justify-end pt-5 pl-6 border-l border-slate-100 shrink-0">
+            <Button className="w-40 h-10 bg-[#5E43F3] hover:bg-[#4F36E3] text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-500/20">
+              <RefreshCw className="h-4 w-4 mr-2" /> Live Reloading
+            </Button>
+            <span className="text-[10px] text-slate-400 font-medium mt-2 text-center">Instantly synced</span>
+          </div>
+        </Card>
 
-          {/* ─── Top Control Bar ────────────────────────────────────────── */}
-          <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4 mb-4">
-            <div className="flex flex-wrap items-end gap-4">
-              {/* Technology */}
-              <div className="min-w-[130px]">
-                <p className={labelCls}>Technology</p>
-                <div className="relative">
-                  <select value={technology} onChange={e => setTechnology(e.target.value)} className={selectCls + " w-full pr-8"}>
-                    {TECHNOLOGIES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+        {/* Main Layout Grid */}
+        <div className="grid grid-cols-12 gap-6 h-[800px]">
+          
+          {/* Main Visualizer (React Flow) */}
+          <div className="col-span-8 flex flex-col gap-6">
+            <Card className={`p-2 shadow-sm overflow-hidden relative transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-[100] rounded-none bg-slate-100 flex-1' : 'flex-1 rounded-2xl border border-slate-200 bg-slate-100'}`}>
+              <div className="absolute inset-x-4 top-4 z-10 flex justify-between items-start pointer-events-none">
+                <div className="flex gap-2 items-center pointer-events-auto">
+                  <div className="bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200/50 shadow-sm">
+                    <span className="text-xs font-semibold text-slate-700">Topology Canvas (React Flow)</span>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => setIsFullscreen(!isFullscreen)} className="h-8 w-8 bg-white/80 backdrop-blur-md border border-slate-200/50 shadow-sm text-slate-700">
+                    {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-2 items-end pointer-events-auto">
+                  <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200/50 shadow-sm">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xs font-semibold text-slate-700 capitalize">{technology}</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Target Qubits */}
-              <div className="min-w-[110px]">
-                <p className={labelCls}>Target Qubits</p>
-                <input type="number" min={1} max={1000} value={qubitsInput}
-                  onChange={e => handleQubitChange(e.target.value)}
-                  onBlur={() => { if (inputError) { setQubitsInput(String(targetQubits)); setInputError(null); } }}
-                  className={cn(inputCls, inputError && "border-rose-400 focus:ring-rose-400/40")}
-                />
-                {inputError && <p className="text-[9px] text-rose-500 font-bold mt-0.5">{inputError}</p>}
-              </div>
-
-              {/* Topology */}
-              <div className="min-w-[130px]">
-                <p className={labelCls}>
-                  Topology <Info className="h-3 w-3 text-slate-300" />
-                </p>
-                <div className="relative">
-                  <select value={topology} onChange={e => setTopology(e.target.value)} className={selectCls + " w-full pr-8"}>
-                    {TOPOLOGIES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Qubit Frequency */}
-              <div className="min-w-[130px]">
-                <p className={labelCls}>
-                  Qubit Frequency <Info className="h-3 w-3 text-slate-300" />
-                </p>
-                <div className="relative">
-                  <input type="number" step="0.01" min={1} max={10} value={freqInput}
-                    onChange={e => handleFreqChange(e.target.value)}
-                    onBlur={() => setFreqInput(qubitFrequency.toFixed(2))}
-                    className={inputCls + " pr-12"}
-                  />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">GHz</span>
-                </div>
-              </div>
-
-              {/* Coupler Type */}
-              <div className="min-w-[150px]">
-                <p className={labelCls}>
-                  Coupler Type <Info className="h-3 w-3 text-slate-300" />
-                </p>
-                <div className="relative">
-                  <select value={couplerType} onChange={e => setCouplerType(e.target.value)} className={selectCls + " w-full pr-8"}>
-                    {COUPLER_TYPES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Level of Detail */}
-              <div className="min-w-[110px]">
-                <p className={labelCls}>
-                  Level of Detail <Info className="h-3 w-3 text-slate-300" />
-                </p>
-                <div className="relative">
-                  <select value={levelOfDetail} onChange={e => setLevelOfDetail(e.target.value)} className={selectCls + " w-full pr-8"}>
-                    {DETAIL_LEVELS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Recalculate Button */}
-              <div className="ml-auto min-w-[120px] flex flex-col justify-end">
-                <Button 
-                  onClick={handleRecalculate} 
-                  disabled={isLoading || !!inputError}
-                  className="h-9 w-full bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-lg shadow-sm shadow-violet-600/20"
+              <div className="w-full h-full bg-white rounded-xl border border-slate-200/50 relative">
+                <ReactFlow 
+                   nodes={nodes} 
+                   edges={edges} 
+                   onNodesChange={onNodesChange}
+                   onEdgesChange={onEdgesChange}
+                   onConnect={onConnect}
+                   nodeTypes={nodeTypes}
+                   edgeTypes={edgeTypes}
+                   fitView 
+                   nodesDraggable={false}
+                   nodesConnectable={false}
+                   attributionPosition="bottom-right"
                 >
-                  {isLoading ? (
-                    <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Zap className="mr-2 h-3.5 w-3.5" />
-                  )}
-                  {isLoading ? "Generating..." : "Recalculate"}
-                </Button>
-                <p className="text-[9px] text-slate-400 text-center mt-1 font-medium">
-                  Last updated: {lastUpdated}
-                </p>
-              </div>
+                   <Background color="#cbd5e1" gap={16} />
+                   <Controls />
+                   {lod !== 'basic' && <MiniMap nodeColor="#5E43F3" maskColor="rgba(248, 250, 252, 0.7)" />}
+                </ReactFlow>
               </div>
             </Card>
+          </div>
 
-          {/* ─── Main 3-Column Layout ──────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-            {/* ── LEFT: Templates + Advanced ────────────────────────────── */}
-            <div className="lg:col-span-3 space-y-4">
-              {/* Architecture Templates */}
-              <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Architecture Templates</p>
-                <div className="space-y-1.5">
-                  {TEMPLATES.map(t => {
-                    const active = topology === t.topology;
-                    const Icon = t.icon;
-                    return (
-                      <button key={t.id} onClick={() => handleTemplateClick(t.topology)}
-                        className={cn(
-                          "w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all cursor-pointer group",
-                          active
-                            ? "border-violet-300 bg-violet-50 shadow-sm"
-                            : "border-transparent hover:bg-slate-50 hover:border-slate-200"
-                        )}
-                      >
-                        <div className={cn(
-                          "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                          active ? "bg-violet-100 text-violet-600" : "bg-slate-100 text-slate-400 group-hover:text-slate-600"
-                        )}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className={cn("text-[11px] font-bold truncate", active ? "text-violet-700" : "text-slate-700")}>
-                            {t.label} ({targetQubits})
-                          </p>
-                          <p className="text-[9px] text-slate-400">{t.sub}</p>
-                        </div>
-                        {active && <ChevronRight className="h-3.5 w-3.5 text-violet-400 ml-auto shrink-0" />}
-                      </button>
-                    );
-                  })}
+          {/* Right Sidebar - Metrics & Resources */}
+          <div className="col-span-4 flex flex-col gap-6">
+            <Card className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden">
+              {/* Decorative Glows */}
+              <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+              
+              <div className="relative z-10">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 flex items-center gap-2 uppercase tracking-widest">
+                    Architecture Summary
+                  </h2>
+                  <div className="bg-slate-50 px-3 py-1 rounded-full border border-slate-200 flex items-center gap-2 shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Score</span>
+                    <span className="text-sm font-black text-emerald-400">{metrics.overallArchitectureScore}/100</span>
+                  </div>
                 </div>
-                <button onClick={() => toast.info("Template management coming soon.")} className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-violet-600 transition-colors cursor-pointer">
-                  <Settings2 className="h-3 w-3" /> Manage Templates
-                </button>
-              </Card>
+                
+                <div className="grid grid-cols-4 gap-3 mb-6">
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100 hover:bg-slate-100 transition-all hover:scale-[1.02] cursor-default shadow-sm">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Qubits</div>
+                    <div className="text-2xl font-black text-slate-900 leading-tight">{metrics.architectureSummary?.qubits}</div>
+                  </div>
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100 hover:bg-slate-100 transition-all hover:scale-[1.02] cursor-default shadow-sm">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Couplers</div>
+                    <div className="text-2xl font-black text-slate-900 leading-tight">{metrics.architectureSummary?.couplers}</div>
+                  </div>
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100 hover:bg-slate-100 transition-all hover:scale-[1.02] cursor-default shadow-sm">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Avg Conn.</div>
+                    <div className="text-2xl font-black text-slate-900 leading-tight">{metrics.architectureSummary?.averageConnectivity}</div>
+                  </div>
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100 hover:bg-slate-100 transition-all hover:scale-[1.02] cursor-default shadow-sm">
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Area (mmÃ‚Â²)</div>
+                    <div className="text-2xl font-black text-slate-900 leading-tight">{metrics.architectureSummary?.chipArea}</div>
+                  </div>
+                </div>
 
-              {/* Advanced Options */}
-              <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4">
-                <button onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 cursor-pointer"
-                >
-                  <span>Advanced Options</span>
-                  {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-                {showAdvanced && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                    className="mt-3 space-y-3 overflow-hidden"
-                  >
-                    <div>
-                      <p className={labelCls}>Connectivity Constraints</p>
-                      <div className="relative">
-                        <select value={connectivity} onChange={e => setConnectivity(e.target.value)} className={selectCls + " w-full pr-8"}>
-                          {["Custom", "Nearest-Neighbor", "All-to-All"].map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                {metrics.warnings && metrics.warnings.length > 0 && (
+                  <div className="mb-6 space-y-2">
+                    {metrics.warnings.map((w: string, i: number) => (
+                      <div key={i} className="bg-rose-50 border border-rose-200 text-rose-700 px-3 py-2 rounded-lg text-xs flex items-start gap-2 shadow-sm">
+                        <span className="text-rose-500 font-bold mt-0.5">Ã¢Å¡Â </span>
+                        <span>{w}</span>
                       </div>
-                    </div>
-                    <div>
-                      <p className={labelCls}>Control Architecture</p>
-                      <div className="relative">
-                        <select value={controlArch} onChange={e => setControlArch(e.target.value)} className={selectCls + " w-full pr-8"}>
-                          {["Multiplexed", "Individual", "Shared Bus"].map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className={labelCls}>Packaging</p>
-                      <div className="relative">
-                        <select value={packaging} onChange={e => setPackaging(e.target.value)} className={selectCls + " w-full pr-8"}>
-                          {["Flip-chip", "Wire-bonded", "3D-integrated"].map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className={labelCls}>Environment</p>
-                      <div className="relative">
-                        <select value={environment} onChange={e => setEnvironment(e.target.value)} className={selectCls + " w-full pr-8"}>
-                          {["10 mK", "20 mK", "50 mK", "100 mK"].map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                  </motion.div>
+                    ))}
+                  </div>
                 )}
-              </Card>
-            </div>
 
-            {/* ── CENTER: Topology Visualization ───────────────────────── */}
-            <div className="lg:col-span-5">
-              <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                  <p className="text-xs font-black text-slate-800">Architecture Topology</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-violet-500" />
-                      <span className="text-[9px] font-semibold text-slate-500">Qubit</span>
+                {(lod === 'balanced' || lod === 'detailed') && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-[11px] font-bold text-indigo-400/80 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
+                        Performance & Reliability
+                      </h3>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">1Q Fidelity</span>
+                          <span className="text-xs font-bold text-emerald-400">{metrics.performanceMetrics?.singleQubitFidelity}%</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">2Q Fidelity</span>
+                          <span className="text-xs font-bold text-emerald-400">{metrics.performanceMetrics?.twoQubitFidelity}%</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Readout Fidelity</span>
+                          <span className="text-xs font-bold text-emerald-400">{metrics.performanceMetrics?.readoutFidelity}%</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Quantum Volume</span>
+                          <span className="text-xs font-bold text-indigo-400">{metrics.performanceMetrics?.quantumVolume}</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">T1 Time</span>
+                          <span className="text-xs font-bold text-slate-900">{metrics.reliabilityMetrics?.T1} µs</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">T2 Time</span>
+                          <span className="text-xs font-bold text-slate-900">{metrics.reliabilityMetrics?.T2} µs</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Error Rate</span>
+                          <span className="text-xs font-bold text-rose-400">{metrics.reliabilityMetrics?.errorRate}%</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                      <span className="text-[9px] font-semibold text-slate-500">Coupler</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                      <span className="text-[9px] font-semibold text-slate-500">Readout</span>
+
+                    <div>
+                      <h3 className="text-[11px] font-bold text-cyan-400/80 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+                        Hardware Resources
+                      </h3>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Control Lines</span>
+                          <span className="text-xs font-bold text-slate-900 bg-white px-2 rounded border border-slate-200 shadow-sm">{metrics.resourceMetrics?.controlLines}</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Flux Lines</span>
+                          <span className="text-xs font-bold text-slate-900 bg-white px-2 rounded border border-slate-200 shadow-sm">{metrics.resourceMetrics?.dcFluxLines}</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Readout Lines</span>
+                          <span className="text-xs font-bold text-slate-900 bg-white px-2 rounded border border-slate-200 shadow-sm">{metrics.resourceMetrics?.readoutLines}</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Cooling Load</span>
+                          <span className="text-xs font-bold text-cyan-400">{metrics.resourceMetrics?.coolingLoad} Ã‚ÂµW</span>
+                        </div>
+                        <div className="flex justify-between items-center group">
+                          <span className="text-xs font-medium text-slate-500">Total Power</span>
+                          <span className="text-xs font-bold text-amber-400">{metrics.resourceMetrics?.totalPower} mW</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* SVG Visualization */}
-                <motion.div key={lastUpdated} initial={{ opacity: 0.5 }} animate={{ opacity: 1 }}
-                  className="h-[360px] bg-[#FAFAFC] p-2"
-                >
-                  <TopologyGraph nodes={graph.nodes} edges={graph.edges} n={targetQubits} />
-                </motion.div>
+                {lod === 'detailed' && (
+                  <div className="mt-6 pt-6 border-t border-slate-200">
+                    <h3 className="text-[11px] font-bold text-rose-400/80 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]"></div>
+                      Scalability & Validation
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-6">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 uppercase">Routing Complexity</span>
+                        <span className="text-xs font-bold text-slate-900">{metrics.scalabilityMetrics?.routingComplexity}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 uppercase">Crosstalk Risk</span>
+                        <span className={`text-xs font-bold ${metrics.reliabilityMetrics?.crosstalkRisk === 'High' ? 'text-rose-400' : 'text-emerald-400'}`}>{metrics.reliabilityMetrics?.crosstalkRisk}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 uppercase">Surface Code</span>
+                        <span className="text-xs font-bold text-slate-900">{metrics.scalabilityMetrics?.surfaceCodeCompatibility}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 uppercase">Architecture Ranking</span>
+                        <span className="text-xs font-bold text-indigo-300">{metrics.validationMetrics?.architectureRanking}</span>
+                      </div>
+                    </div>
 
-                {/* Footer stats bar */}
-                <div className="flex items-center gap-4 px-4 py-2.5 border-t border-slate-100 bg-slate-50/50 flex-wrap">
-                  {[
-                    { label: "Total Qubits", value: result.totalQubits },
-                    { label: "Couplers", value: result.couplers },
-                    { label: "Readout Resonators", value: result.readoutResonators },
-                  ].map(s => (
-                    <div key={s.label} className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-semibold text-slate-400">{s.label}:</span>
-                      <Badge variant="secondary" className="rounded-full text-[9px] font-black px-2 py-0 bg-white border-slate-200">
-                        {s.value}
-                      </Badge>
+                    <div className="flex flex-col gap-1 mb-6">
+                      <span className="text-[10px] font-medium text-slate-500 uppercase flex justify-between">
+                        <span>Scalability Score</span>
+                        <span className="text-slate-900">{metrics.scalabilityMetrics?.scalabilityScore}/100</span>
+                      </span>
+                      <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ width: `${metrics.scalabilityMetrics?.scalabilityScore}%` }}></div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
 
-            {/* ── RIGHT: Summary + Score ────────────────────────────────── */}
-            <div className="lg:col-span-4 space-y-4">
-              {/* Architecture Summary */}
-              <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Architecture Summary</p>
-                <motion.div key={configString} initial={{ opacity: 0.6 }} animate={{ opacity: 1 }}
-                  className="grid grid-cols-2 gap-2.5"
-                >
-                  {/* Total Qubits */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Cpu className="h-3 w-3 text-violet-500" />
-                      <span className="text-[9px] font-bold text-slate-400">Total Qubits</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                        <h4 className="text-[9px] font-bold text-slate-500 uppercase mb-2 flex justify-between">
+                          <span>Connectivity Matrix</span>
+                        </h4>
+                        <div className="grid grid-cols-5 gap-0.5 opacity-80">
+                          {Array.from({ length: 25 }).map((_, i) => (
+                             <div key={i} className={`w-full aspect-square rounded-[1px] transition-all duration-1000 ${Math.random() > 0.7 ? 'bg-indigo-500 shadow-[0_0_4px_rgba(99,102,241,0.6)]' : 'bg-slate-200'}`}></div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                        <h4 className="text-[9px] font-bold text-slate-500 uppercase mb-2 flex justify-between">
+                          <span>Adjacency Array</span>
+                        </h4>
+                        <div className="grid grid-cols-5 gap-0.5 opacity-80">
+                          {Array.from({ length: 25 }).map((_, i) => (
+                             <div key={i} className={`w-full aspect-square rounded-[1px] transition-all duration-1000 ${Math.random() > 0.8 ? 'bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.6)]' : 'bg-slate-200'}`}></div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xl font-black text-slate-900">{result.totalQubits}</p>
                   </div>
-                  {/* Couplers */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Cable className="h-3 w-3 text-teal-500" />
-                      <span className="text-[9px] font-bold text-slate-400">Couplers</span>
-                    </div>
-                    <p className="text-xl font-black text-slate-900">{result.couplers}</p>
-                  </div>
-                  {/* Readout Resonators */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Radio className="h-3 w-3 text-amber-500" />
-                      <span className="text-[9px] font-bold text-slate-400">Readout Resonators</span>
-                    </div>
-                    <p className="text-xl font-black text-slate-900">{result.readoutResonators}</p>
-                  </div>
-                  {/* Chip Area */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Box className="h-3 w-3 text-blue-500" />
-                      <span className="text-[9px] font-bold text-slate-400">Chip Area <span className="text-slate-300">(est.)</span></span>
-                    </div>
-                    <p className="text-xl font-black text-slate-900">{result.chipArea} <span className="text-xs font-bold text-slate-400">mm²</span></p>
-                  </div>
-                  {/* Control Lines */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Activity className="h-3 w-3 text-orange-500" />
-                      <span className="text-[9px] font-bold text-slate-400">Control Lines <span className="text-slate-300">(est.)</span></span>
-                    </div>
-                    <p className="text-xl font-black text-slate-900">{result.controlLines}</p>
-                  </div>
-                  {/* Two-Qubit Gate Fidelity */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Gauge className="h-3 w-3 text-emerald-500" />
-                      <span className="text-[9px] font-bold text-slate-400">Two-Qubit Gate</span>
-                    </div>
-                    <p className="text-xl font-black text-slate-900">{result.fidelity}%</p>
-                    <p className="text-[9px] font-bold text-slate-400">Fidelity</p>
-                  </div>
-                </motion.div>
-              </Card>
-
-              {/* Architecture Score */}
-              <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Architecture Score</p>
-                <motion.div key={configString} initial={{ opacity: 0.6 }} animate={{ opacity: 1 }}
-                  className="flex gap-5"
-                >
-                  <ScoreGauge score={scores.architectureScore} />
-                  <div className="flex-1 space-y-2.5 py-1">
-                    <ScoreBar label="Scalability" value={scores.scalabilityScore} />
-                    <ScoreBar label="Connectivity" value={scores.connectivityScore} />
-                    <ScoreBar label="Complexity" value={scores.complexityScore} />
-                    <ScoreBar label="Fidelity" value={scores.fidelityScore} />
-                    <ScoreBar label="Efficiency" value={scores.efficiencyScore} />
-                    <ScoreBar label="Simplicity" value={scores.simplicityScore} />
-                  </div>
-                </motion.div>
-                <button onClick={() => toast.info("Full analysis dashboard is under construction.")} className="mt-3 flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 transition-colors cursor-pointer">
-                  View full analysis <ArrowRight className="h-3 w-3" />
-                </button>
-              </Card>
-            </div>
-          </div>
-
-          {/* ─── Bottom Section: Resources + Recommendations ───────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-
-            {/* Resource Estimates */}
-            <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Resource Estimates</p>
-              <motion.div key={configString} initial={{ opacity: 0.6 }} animate={{ opacity: 1 }}
-                className="grid grid-cols-3 gap-2.5"
-              >
-                <ResourceCard label="T1 Coherence" value={result.t1Coherence} unit="us" max={500} />
-                <ResourceCard label="T2 Coherence" value={result.t2Coherence} unit="us" max={400} />
-                <ResourceCard label="Crosstalk Est." value={result.crosstalk} unit="%" max={10} />
-                <ResourceCard label="Routing Cmplx." value={result.routingComplexity} unit="" max={5} />
-                <ResourceCard label="Fabrication Diff." value={result.fabricationDifficulty} unit="/100" max={100} />
-                <ResourceCard label="Estimated Yield" value={result.estimatedYield} unit="%" max={100} />
-                <ResourceCard label="Power Consump." value={result.powerConsumption} unit="W" max={50} />
-                <ResourceCard label="Error Rate" value={result.errorRate} unit="%" max={5} />
-              </motion.div>
-              <p className="mt-3 text-[9px] text-slate-400 font-semibold">
-                Estimates are based on selected technology and typical parameters.
-              </p>
-            </Card>
-
-            {/* Recommendations */}
-            <Card className="rounded-2xl border-slate-200/70 shadow-sm bg-white p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Recommendations</p>
-              <motion.div key={configString} initial={{ opacity: 0.6 }} animate={{ opacity: 1 }}
-                className="space-y-2.5"
-              >
-                {recommendations.map((rec, i) => {
-                  const Icon = rec.type === "success" ? CheckCircle2 : rec.type === "warning" ? AlertTriangle : Lightbulb;
-                  const color = rec.type === "success" ? "text-emerald-500" : rec.type === "warning" ? "text-amber-500" : "text-blue-500";
-                  return (
-                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50/80 border border-slate-100">
-                      <Icon className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", color)} />
-                      <p className="text-[11px] font-semibold text-slate-600 leading-relaxed">{rec.text}</p>
-                    </div>
-                  );
-                })}
-              </motion.div>
-              <button onClick={() => toast.info("Detailed reports are coming soon.")} className="mt-3 flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 transition-colors cursor-pointer">
-                View detailed report <ArrowRight className="h-3 w-3" />
-              </button>
+                )}
+              </div>
             </Card>
           </div>
 
-        </motion.div>
+        </div>
       </div>
     </div>
   );

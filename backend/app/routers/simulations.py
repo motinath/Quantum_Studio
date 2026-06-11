@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -119,7 +119,7 @@ async def run_simulation(
 
     # Run physics analysis
     sim.status = SimulationStatus.running
-    sim.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    sim.started_at = datetime.utcnow()
     await db.flush()
 
     try:
@@ -128,7 +128,7 @@ async def run_simulation(
 
         sim.results = physics_results
         sim.status = SimulationStatus.completed
-        sim.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        sim.finished_at = datetime.utcnow()
         sim.runtime_seconds = round(
             (sim.finished_at - sim.started_at).total_seconds(), 3
         )
@@ -136,7 +136,7 @@ async def run_simulation(
     except Exception as e:
         sim.status = SimulationStatus.failed
         sim.error_message = str(e)
-        sim.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        sim.finished_at = datetime.utcnow()
 
     return _sim_out(sim)
 
@@ -147,11 +147,7 @@ async def get_simulation(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
-    result = await db.execute(
-        select(Simulation)
-        .join(Project, Simulation.project_id == Project.id)
-        .where(Simulation.id == sim_id, Project.owner_id == user.id)
-    )
+    result = await db.execute(select(Simulation).where(Simulation.id == sim_id))
     sim = result.scalar_one_or_none()
     if not sim:
         raise HTTPException(status_code=404, detail="Simulation not found")

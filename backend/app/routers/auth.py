@@ -67,7 +67,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     user = User(
         name=body.name,
         email=body.email,
-        hashed_password=await hash_password(body.password),
+        hashed_password=hash_password(body.password),
         organization=body.organization,
         role=body.role,
     )
@@ -84,7 +84,7 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
     result = await db.execute(select(User).where(User.email == form.username))
     user = result.scalar_one_or_none()
 
-    if not user or not await verify_password(form.password, user.hashed_password):
+    if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

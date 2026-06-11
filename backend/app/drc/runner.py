@@ -148,15 +148,11 @@ def run_drc_from_payload(payload: dict[str, Any]) -> DRCReport:
     qfreqs = fp.get("qubit_frequencies_GHz", {})
     rfreqs = fp.get("resonator_frequencies_GHz", {})
     detunings = fp.get("detunings_GHz", {})
-    # Build qubit-resonator map robustly (e.g., Readout_Q10 -> Q10)
-    qr_map = {}
-    for rname in rfreqs:
-        target_q = rname.replace("RO_", "")  # fallback
-        for q in sorted(qfreqs.keys(), key=len, reverse=True):
-            if q in rname:
-                target_q = q
-                break
-        qr_map[target_q] = rname
+    # Build qubit-resonator map: RO_Q1 → Q1
+    qr_map = {
+        rname.replace("RO_", ""): rname
+        for rname in rfreqs
+    }
     # Build coupling graph from placement edges
     edges   = placement.get("edges", [])
     cg: dict[str, list[str]] = {q: [] for q in qfreqs}
@@ -192,7 +188,7 @@ def run_drc_from_payload(payload: dict[str, Any]) -> DRCReport:
     coupler_pairs_c = [
         (e.get("qubit_a", ""), e.get("qubit_b", "")) for e in edges
     ]
-    resonator_map_c = {r: q for q, r in qr_map.items()}
+    resonator_map_c = {r: r.replace("RO_", "") for r in rfreqs}
     condrc = ConnectivityDRC(
         qubit_ids       = list(qfreqs.keys()),
         coupler_edges   = coupler_pairs_c,

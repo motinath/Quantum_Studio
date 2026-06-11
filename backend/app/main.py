@@ -96,7 +96,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     log.exception(f"Unhandled exception on {request.url}: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
+        content={"detail": "Internal server error", "error": str(exc)},
     )
 
 
@@ -149,11 +149,8 @@ async def drc(body: dict):
 @legacy.post("/netlist")
 async def netlist(body: dict):
     from app.services.chip_generator import generate_chip
-    import asyncio
-    from functools import partial
     prompt = f"{body.get('num_qubits', 5)} qubit {body.get('topology', 'grid')} chip"
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, partial(generate_chip, prompt))
+    result = await generate_chip(prompt)
     return {"netlist": result.get("code", ""), "num_qubits": result.get("num_qubits")}
 
 

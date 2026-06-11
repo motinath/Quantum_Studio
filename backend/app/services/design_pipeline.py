@@ -101,7 +101,6 @@ async def run_design_pipeline(constraints: "DesignConstraints") -> dict[str, Any
                 q.group           = qs.group
                 q.ej_ghz          = qs.EJ_GHz
                 q.ec_ghz          = qs.EC_GHz
-                q.anharmonicity_ghz = qs.anharmonicity_GHz
         for rs in freq_plan_obj.resonators:
             if graph.has_node(rs.name):
                 r = graph.get_node(rs.name)

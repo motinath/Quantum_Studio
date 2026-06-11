@@ -111,13 +111,10 @@ class Parser:
         attrs = self._parse_attributes()
         # derive type from attributes
         qubit_type = "transmon"
-        filtered_attrs = []
         for a in attrs:
             if a.key == "type":
                 qubit_type = str(a.value)
-            else:
-                filtered_attrs.append(a)
-        return QubitNode(name=name, qubit_type=qubit_type, attributes=filtered_attrs)
+        return QubitNode(name=name, qubit_type=qubit_type, attributes=attrs)
 
     # ── parse coupler statement ───────────────────────────────────────────
 

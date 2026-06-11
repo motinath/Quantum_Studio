@@ -17,8 +17,6 @@ import {
 
 const searchSchema = z.object({ conversationId: z.string().optional() });
 
-const viewCache = new Map<string, { zoom: number; pan: { x: number; y: number } }>();
-
 export const Route = createFileRoute("/_app/quantum-editor")({
   head: () => ({ meta: [{ title: "Quantum Editor — Silicofeller" }] }),
   validateSearch: (s) => searchSchema.parse(s),
@@ -48,7 +46,6 @@ function QuantumEditorPage() {
   useEffect(() => {
     if (!conversation || loadedFor.current === conversation.id) return;
     const seed = fromGenerateResponse(conversation.result);
-    const cached = viewCache.get(conversation.id) || { zoom: 1, pan: { x: 0, y: 0 } };
     dispatch({
       type: "LOAD",
       state: {
@@ -56,21 +53,12 @@ function QuantumEditorPage() {
         connections: seed.connections,
         variables: seed.variables,
       },
-      zoom: cached.zoom,
-      pan: cached.pan,
     });
     // Seed prevResultRef with the original generate result so the first sync
     // has access to placement.edges, frequency_plan, etc.
     prevResultRef.current = conversation.result;
     loadedFor.current = conversation.id;
   }, [conversation]);
-
-  // Cache view state for this specific circuit
-  useEffect(() => {
-    if (conversation) {
-      viewCache.set(conversation.id, { zoom: state.zoom, pan: state.pan });
-    }
-  }, [state.zoom, state.pan, conversation]);
 
   // Two-way sync: push state changes back into design context (debounced via rev)
   const prevResultRef = useRef<import("@/lib/api/backend").GenerateResponse | null>(null);

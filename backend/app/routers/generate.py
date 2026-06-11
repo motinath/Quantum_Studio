@@ -13,8 +13,6 @@ New endpoints (all under /api):
 
 from __future__ import annotations
 
-import asyncio
-from functools import partial
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -132,10 +130,7 @@ async def generate(
     body: GenerateRequest,
     user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None, partial(generate_chip, body.prompt, body.substrate, body.metal)
-    )
+    result = await generate_chip(body.prompt, body.substrate, body.metal)
     return result
 
 

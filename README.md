@@ -80,7 +80,7 @@ npm install
 npm run dev
 ```
 
-App: `http://localhost:5173`
+App: `http://localhost:8080`
 
 ### Docker (Production)
 
@@ -395,7 +395,7 @@ Any password works with the demo accounts when the backend is offline.
 DATABASE_URL=sqlite+aiosqlite:///./dev.db
 APP_ENV=development
 MAX_QUBITS=256
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+CORS_ORIGINS=http://localhost:8080,http://localhost:5173,http://localhost:3000
 SECRET_KEY=your-secret-key-min-32-chars
 # Optional
 ANTHROPIC_API_KEY=sk-ant-...

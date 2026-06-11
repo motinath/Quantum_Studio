@@ -15,11 +15,11 @@ Tables:
 """
 
 from __future__ import annotations
+from typing import Optional
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Any, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -47,7 +47,7 @@ def _uuid() -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.utcnow()
 
 
 # ── enums ───────────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(Text, default="")
     topology: Mapped[str] = mapped_column(String(64), default="custom")
@@ -115,7 +115,7 @@ class Project(Base):
     substrate_material: Mapped[str] = mapped_column(String(64), default="silicon")
     metal_layer: Mapped[str] = mapped_column(String(64), default="aluminum")
     # Full GenerateResponse JSON payload from designer/compiler
-    design_payload: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    design_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
@@ -134,10 +134,10 @@ class Version(Base):
     __tablename__ = "versions"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"))
     tag: Mapped[str] = mapped_column(String(64))
     message: Mapped[str] = mapped_column(Text, default="")
-    snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # full design payload
+    snapshot: Mapped[dict] = mapped_column(JSON, default=dict)  # full design payload
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     project: Mapped["Project"] = relationship("Project", back_populates="versions")
@@ -149,12 +149,12 @@ class QCLangFile(Base):
     __tablename__ = "qclang_files"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"))
     filename: Mapped[str] = mapped_column(String(120), default="project.qc")
     content: Mapped[str] = mapped_column(Text, default="")
-    ast_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    ast_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     is_valid: Mapped[bool] = mapped_column(Boolean, default=False)
-    errors: Mapped[Optional[list[Any]]] = mapped_column(JSON, nullable=True)
+    errors: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
@@ -167,9 +167,9 @@ class Layout(Base):
     __tablename__ = "layouts"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"))
     version_tag: Mapped[str] = mapped_column(String(64), default="latest")
-    placement_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    placement_json: Mapped[dict] = mapped_column(JSON, default=dict)
     gds_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     qiskit_code: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
@@ -183,11 +183,11 @@ class Simulation(Base):
     __tablename__ = "simulations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"))
     solver: Mapped[str] = mapped_column(String(64), default="eigenmode")  # eigenmode | driven_modal | transient
     status: Mapped[SimulationStatus] = mapped_column(Enum(SimulationStatus), default=SimulationStatus.queued)
-    config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    results: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    config: Mapped[dict] = mapped_column(JSON, default=dict)
+    results: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     runtime_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     memory_gb: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -204,13 +204,13 @@ class VerificationReport(Base):
     __tablename__ = "verification_reports"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"))
     status: Mapped[VerificationStatus] = mapped_column(Enum(VerificationStatus), default=VerificationStatus.pending)
     drc_passed: Mapped[bool] = mapped_column(Boolean, default=False)
     violations: Mapped[list] = mapped_column(JSON, default=list)
     frequency_collisions: Mapped[list] = mapped_column(JSON, default=list)
     crosstalk_warnings: Mapped[list] = mapped_column(JSON, default=list)
-    summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     project: Mapped["Project"] = relationship("Project", back_populates="verification_reports")
@@ -222,10 +222,10 @@ class TapeoutPackage(Base):
     __tablename__ = "tapeout_packages"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"))
     version_tag: Mapped[str] = mapped_column(String(64))
     gds_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    manifest: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    manifest: Mapped[dict] = mapped_column(JSON, default=dict)
     fab_notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -238,8 +238,8 @@ class ChatHistory(Base):
     __tablename__ = "chat_history"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"))
+    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     session_id: Mapped[str] = mapped_column(String(64), index=True)
     role: Mapped[str] = mapped_column(String(16))  # "user" | "assistant"
     content: Mapped[str] = mapped_column(Text)

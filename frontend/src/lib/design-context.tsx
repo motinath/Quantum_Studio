@@ -88,11 +88,18 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleDelete = (id: string) => {
-    const next = conversations.filter((c) => c.id !== id);
-    setConversations(next);
-    if (id === activeId) {
-      setActiveId(next.length > 0 ? next[0].id : null);
-    }
+    setConversations((cs) => {
+      const next = cs.filter((c) => c.id !== id);
+      if (next.length === 0) {
+        const c = newConversation();
+        setActiveId(c.id);
+        return [c];
+      }
+      if (id === activeId) {
+        setActiveId(next[0].id);
+      }
+      return next;
+    });
   };
 
   const updateActive = (patch: Partial<Conversation>) => {

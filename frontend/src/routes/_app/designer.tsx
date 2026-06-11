@@ -208,27 +208,7 @@ function DesignerPage() {
     }
   };
 
-  if (!active) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-3rem)] w-full bg-[#F7F8FA]">
-        <div className="flex flex-col items-center justify-center p-8 bg-white rounded-2xl shadow-sm border border-slate-200/60 max-w-sm text-center">
-          <div className="h-16 w-16 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-6">
-            <MessageSquare className="h-8 w-8" />
-          </div>
-          <h2 className="text-xl font-black text-slate-900">No Active Sessions</h2>
-          <p className="text-xs text-slate-500 mt-2 mb-8 leading-relaxed font-medium">
-            You don't have any open design sessions. Start a new conversation to synthesize a quantum chip.
-          </p>
-          <Button
-            onClick={handleNew}
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-200 rounded-xl font-bold h-10 active:scale-95 transition-all"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Start New Conversation
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (!active) return null;
   const hasOutput = !!active.result;
   const result = active.result;
 
@@ -844,9 +824,6 @@ function ChipView({ result }: { result: GenerateResponse }) {
 // InteractiveCADCanvas  (unchanged logic, polished wrapper)
 // ─────────────────────────────────────────────────────────────────────────────
 
-let cachedZoom = 1;
-let cachedPan = { x: 0, y: 0 };
-
 function InteractiveCADCanvas({
   result,
   layers,
@@ -858,8 +835,8 @@ function InteractiveCADCanvas({
   const [selectedQubit, setSelectedQubit] = useState<
     import("@/lib/api/backend").PlacementQubit | null
   >(null);
-  const [zoomScale, setZoomScale] = useState(cachedZoom);
-  const [panOffset, setPanOffset] = useState(cachedPan);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -867,11 +844,6 @@ function InteractiveCADCanvas({
   const canvasParentRef = useRef<HTMLDivElement | null>(null);
   const [hovered, setHovered] = useState<import("@/lib/api/backend").PlacementQubit | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    cachedZoom = zoomScale;
-    cachedPan = panOffset;
-  }, [zoomScale, panOffset]);
 
   const qubits = result.placement?.qubits ?? [];
   const placementEdges = result.placement?.edges ?? [];

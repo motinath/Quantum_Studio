@@ -7,7 +7,7 @@ Falls back to standalone generation if the export engine fails.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 
@@ -48,8 +48,6 @@ def generate_tapeout_package(
     svg_content = None
     dxf_content = None
     qclang_src  = None
-    json_content = None
-    pdf_content = None
 
     try:
         from app.core.design_graph.graph import DesignGraph
@@ -84,8 +82,6 @@ def generate_tapeout_package(
         svg_content = exports.get("svg", "")
         dxf_content = exports.get("dxf", "")
         qclang_src  = exports.get("qclang", "")
-        json_content = exports.get("json", "")
-        pdf_content = exports.get("pdf_report", "")
 
     except Exception:
         # Fallback GDS generation
@@ -93,22 +89,6 @@ def generate_tapeout_package(
 
     fab_spec       = _generate_fab_spec(substrate, metal, num_qubits, topology)
     process_check  = _process_compatibility_check(substrate, metal)
-
-    actual_files = []
-    if gds_content:
-        actual_files.append(f"{project_name}_{version}.gds")
-    if svg_content:
-        actual_files.append(f"{project_name}_{version}.svg")
-    if dxf_content:
-        actual_files.append(f"{project_name}_{version}.dxf")
-    if qclang_src:
-        actual_files.append(f"{project_name}_{version}.qc")
-    if json_content:
-        actual_files.append(f"{project_name}_{version}.json")
-    if pdf_content:
-        actual_files.append(f"{project_name}_{version}_design_report.txt")
-    if fab_spec:
-        actual_files.append(f"{project_name}_{version}_fab_spec.json")
 
     manifest = {
         "project":      project_name,
@@ -118,8 +98,16 @@ def generate_tapeout_package(
         "substrate":    substrate,
         "metal":        metal,
         "layer_map":    LAYER_MAP,
-        "files":        actual_files,
-        "generated_at":   datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        "files": [
+            f"{project_name}_{version}.gds",
+            f"{project_name}_{version}.svg",
+            f"{project_name}_{version}.dxf",
+            f"{project_name}_{version}.qc",
+            f"{project_name}_{version}_fab_spec.json",
+            f"{project_name}_{version}_drc_report.txt",
+            f"{project_name}_{version}_design_report.txt",
+        ],
+        "generated_at":   datetime.utcnow().isoformat(),
         "fab_notes":      fab_notes,
         "process_check":  process_check,
         "engine":         "quantum-studio-v2",
@@ -131,8 +119,6 @@ def generate_tapeout_package(
         "svg_content": svg_content,
         "dxf_content": dxf_content,
         "qclang_src":  qclang_src,
-        "json_content": json_content,
-        "pdf_content": pdf_content,
         "fab_spec":    fab_spec,
     }
 

@@ -553,8 +553,6 @@ export type EditorAction =
         connections: EditorConnection[];
         variables?: EditorVariables;
       };
-      zoom?: number;
-      pan?: { x: number; y: number };
     }
   | { type: "ADD"; component: EditorComponent }
   | { type: "MOVE"; id: string; x: number; y: number }
@@ -590,8 +588,6 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         components: action.state.components,
         connections: action.state.connections,
         variables: action.state.variables ?? state.variables,
-        zoom: action.zoom ?? state.zoom,
-        pan: action.pan ?? state.pan,
         past: [],
         future: [],
         rev: state.rev + 1,

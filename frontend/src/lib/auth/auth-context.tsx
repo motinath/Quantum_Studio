@@ -173,7 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUser(newUser);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
-    localStorage.removeItem("qs_token");
   };
 
   // ── signUp: calls the real backend /api/auth/register ───────────────────

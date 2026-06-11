@@ -38,9 +38,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/quantum_studio
       SYNC_DATABASE_URL: postgresql://postgres:password@db:5432/quantum_studio
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: "${SECRET_KEY:?SECRET_KEY must be provided}"
+      SECRET_KEY: "${SECRET_KEY:-change-me-in-production-minimum-32-chars}"
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
-      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:5174}"
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:5174"
       APP_ENV: production
     ports:
       - "5000:5000"

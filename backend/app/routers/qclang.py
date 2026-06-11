@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -93,12 +93,11 @@ def _compile_qcl_full(source: str, target: str) -> dict[str, Any]:
 class ParseRequest(BaseModel):
     source: str
     project_id: str | None = None
-    name: str | None = None
 
 
 class CompileRequest(BaseModel):
     source: str
-    target: Literal["qiskit_metal", "json_ir", "spice"] = "qiskit_metal"
+    target: str = "qiskit_metal"   # qiskit_metal | json_ir | spice
     target_freq_ghz: float = 5.0
     substrate: str = "silicon"
     metal: str = "aluminum"
@@ -173,14 +172,6 @@ async def parse_qclang(body: ParseRequest) -> dict[str, Any]:
             }
         except Exception as e:
             return {"success": False, "errors": [{"severity": "error", "message": str(e)}], "dialect": "qcl", "ast": None}
-
-    elif _is_qcl_dialect(body.source):
-        return {
-            "success": False,
-            "errors": [{"severity": "error", "message": f"Full QChipLang compiler unavailable: {_QCLFULL_ERR}"}],
-            "dialect": "qcl",
-            "ast": None,
-        }
 
     # .qc dialect
     errors: list[dict] = []
@@ -311,9 +302,6 @@ async def save_qclang(
             ast_json = {"dialect": "qcl", "metrics": str(metrics)}
         except Exception as e:
             errors.append({"severity": "error", "message": str(e)})
-    elif _is_qcl_dialect(body.source):
-        # .qcl dialect detected but full compiler not available
-        errors.append({"severity": "error", "message": f"Full QChipLang compiler unavailable: {_QCLFULL_ERR}"})
     else:
         # .qc dialect
         try:
@@ -327,11 +315,9 @@ async def save_qclang(
 
     is_valid = not any(e["severity"] == "error" for e in errors)
 
-    # Determine filename based on dialect and user-provided name
+    # Determine filename based on dialect
     dialect = "qcl" if _is_qcl_dialect(body.source) else "qc"
-    import re as _re
-    base_name = _re.sub(r"[^\w\-]", "_", body.name.strip()) if body.name and body.name.strip() else str(uuid.uuid4())[:8]
-    filename = f"{base_name}.{dialect}"
+    filename = f"project.{dialect}"
 
     existing = await db.execute(
         select(QCLangFile).where(

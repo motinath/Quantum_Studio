@@ -74,8 +74,8 @@ export function EditorToolbar({ state, dispatch, circuitName, conversationId }: 
     setIsGeneratingCode(true);
     try {
       const result = await generateMetalCode({
-        components: state.components as unknown as Record<string, unknown>[],
-        connections: state.connections as unknown as Record<string, unknown>[],
+        components: state.components,
+        connections: state.connections,
         variables: state.variables as unknown as Record<string, unknown>,
       });
       download(`${circuitName || "circuit"}_metal.py`, result.code, "text/x-python");
