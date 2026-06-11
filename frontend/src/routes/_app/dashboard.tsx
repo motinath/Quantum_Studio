@@ -15,8 +15,11 @@ import {
   Pencil,
   PlayCircle,
   FileText,
+  Import,
 } from "lucide-react";
 import { useProject } from "@/lib/project-context";
+import { QISKIT_CATALOG } from "@/components/quantum-editor/qiskit-metal-catalog";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({ meta: [{ title: "Workspace — Silicofeller" }] }),
@@ -182,33 +185,33 @@ function WorkspaceHomePage() {
   const metrics = [
     {
       label: "Total Projects",
-      value: "4",
-      subtext: "Active: HeavyHex_64Q",
+      value: projects.length.toString(),
+      subtext: `Active: ${projects.length > 0 ? projects[0].name : "None"}`,
       icon: Folder,
       iconBg: "#EDE9FE",
       iconColor: "#7C3AED",
       sparkColor: "#7C3AED",
-      sparkPoints: [1, 2, 1.5, 3, 3.5, 4],
+      sparkPoints: [1, 2, 1.5, 3, 3.5, Math.max(4, projects.length)],
     },
     {
       label: "Total Designs",
-      value: "12",
-      subtext: "+3 this week",
+      value: projects.reduce((acc, p) => acc + (p.topology ? 1 : 0), 0).toString(),
+      subtext: "Synced from workspace",
       icon: Cpu,
       iconBg: "#EFF6FF",
       iconColor: "#2563EB",
       sparkColor: "#2563EB",
-      sparkPoints: [6, 8, 7, 9, 10, 12],
+      sparkPoints: [6, 8, 7, 9, 10, projects.length + 2],
     },
     {
-      label: "Total Components",
-      value: "38",
-      subtext: "+5 this week",
+      label: "Component Library",
+      value: QISKIT_CATALOG.length.toString(),
+      subtext: "Official QComponent gallery",
       icon: Boxes,
       iconBg: "#F0FDF4",
       iconColor: "#059669",
       sparkColor: "#059669",
-      sparkPoints: [25, 28, 27, 32, 35, 38],
+      sparkPoints: [25, 28, 27, 32, 35, QISKIT_CATALOG.length],
     },
   ];
 
@@ -519,6 +522,29 @@ function WorkspaceHomePage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Quick Actions Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.35 }}
+            >
+              <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-[14px] font-semibold text-[#111827]"
+                    style={{ fontWeight: 600 }}
+                  >
+                    Quick Actions
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  <Button className="w-full justify-start gap-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg h-[38px] font-medium shadow-sm">
+                    <Import className="h-4 w-4" /> Import Design
+                  </Button>
                 </div>
               </Card>
             </motion.div>
