@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OurTeamRouteImport } from './routes/our-team'
+import { Route as DocumentationRouteImport } from './routes/documentation'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -44,6 +46,16 @@ const OurTeamRoute = OurTeamRouteImport.update({
   path: '/our-team',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentationRoute = DocumentationRouteImport.update({
+  id: '/documentation',
+  path: '/documentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -58,9 +70,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/blog/$slug',
-  path: '/blog/$slug',
-  getParentRoute: () => rootRouteImport,
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/sign-up',
@@ -185,6 +197,8 @@ const AppAboutRoute = AppAboutRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
+  '/documentation': typeof DocumentationRoute
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -214,6 +228,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRouteWithChildren
+  '/documentation': typeof DocumentationRoute
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -246,6 +262,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/blog': typeof BlogRouteWithChildren
+  '/documentation': typeof DocumentationRoute
   '/our-team': typeof OurTeamRoute
   '/_app/about': typeof AppAboutRoute
   '/_app/admin': typeof AppAdminRoute
@@ -277,6 +295,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/blog'
+    | '/documentation'
     | '/our-team'
     | '/about'
     | '/admin'
@@ -306,6 +326,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/blog'
+    | '/documentation'
     | '/our-team'
     | '/about'
     | '/admin'
@@ -337,6 +359,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/blog'
+    | '/documentation'
     | '/our-team'
     | '/_app/about'
     | '/_app/admin'
@@ -369,8 +393,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  BlogRoute: typeof BlogRouteWithChildren
+  DocumentationRoute: typeof DocumentationRoute
   OurTeamRoute: typeof OurTeamRoute
-  BlogSlugRoute: typeof BlogSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -380,6 +405,20 @@ declare module '@tanstack/react-router' {
       path: '/our-team'
       fullPath: '/our-team'
       preLoaderRoute: typeof OurTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documentation': {
+      id: '/documentation'
+      path: '/documentation'
+      fullPath: '/documentation'
+      preLoaderRoute: typeof DocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
@@ -405,10 +444,10 @@ declare module '@tanstack/react-router' {
     }
     '/blog/$slug': {
       id: '/blog/$slug'
-      path: '/blog/$slug'
+      path: '/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof BlogRoute
     }
     '/_auth/sign-up': {
       id: '/_auth/sign-up'
@@ -645,12 +684,23 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  BlogRoute: BlogRouteWithChildren,
+  DocumentationRoute: DocumentationRoute,
   OurTeamRoute: OurTeamRoute,
-  BlogSlugRoute: BlogSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

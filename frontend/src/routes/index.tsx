@@ -442,11 +442,10 @@ function SiteNav({
 }) {
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
+      className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
           ? "border-b border-black/10 bg-[#E8E6DE]/85 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl"
           : "border-b border-transparent bg-[#E8E6DE]/40 backdrop-blur-md"
-      }`}
+        }`}
     >
       <div className="flex items-center justify-between px-6 py-4 lg:px-10">
         <Link to="/" aria-label="SilicoFeller home" className="flex items-center">
@@ -462,6 +461,9 @@ function SiteNav({
           <a href="#features" className="transition-colors hover:text-foreground">
             Features
           </a>
+          <Link to="/documentation" className="transition-colors hover:text-foreground">
+            Documentation
+          </Link>
           <a href="#blog" className="transition-colors hover:text-foreground">
             Blog
           </a>
