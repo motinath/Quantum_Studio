@@ -1,22 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useDesign } from "@/lib/design-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Eye, EyeOff, ChevronDown, ChevronRight, Search,
-  ZoomIn, ZoomOut, Maximize2, Move, MousePointer, Ruler,
-  Grid3X3, Download, GitCompare, ExternalLink,
-  ChevronUp, GripHorizontal, CheckCircle2, AlertTriangle,
-  RefreshCw, Info, X, Cpu, Activity, Bell,
-  AlignCenter, Crosshair, Maximize, ChevronLeft,
-  MoreVertical, Layers, ScanLine, Network, CircuitBoard,
-} from "lucide-react";
-import { useDesign } from "@/lib/design-context";
 import type { GenerateResponse } from "@/lib/api/backend";
+import {
+  MousePointer, Move, ZoomIn, ZoomOut, Maximize2, Maximize,
+  ChevronDown, ChevronUp, ChevronRight, AlignCenter, Crosshair,
+  CircuitBoard, ScanLine, Network, Activity, Layers, Cpu,
+  ExternalLink, Download, GitCompare, Bell, Search,
+  GripHorizontal, MoreVertical, Eye, EyeOff,
+  CheckCircle2, AlertTriangle, RefreshCw,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_app/layout-viewer")({
-  head: () => ({ meta: [{ title: "Layout Viewer — Silicofeller" }] }),
-  component: LayoutViewerPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/quantum-editor" });
+  },
 });
 
 // ─── Types ─────────────────────────────────────────────────────────────────────

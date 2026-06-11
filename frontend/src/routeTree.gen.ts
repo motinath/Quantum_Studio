@@ -14,6 +14,7 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSessionTimeoutRouteImport } from './routes/_auth/session-timeout'
@@ -63,6 +64,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/sign-up',
@@ -197,7 +203,7 @@ const AuthAuthGithubCallbackRoute = AuthAuthGithubCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -224,11 +230,12 @@ export interface FileRoutesByFullPath {
   '/session-timeout': typeof AuthSessionTimeoutRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/auth/github/callback': typeof AuthAuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/session-timeout': typeof AuthSessionTimeoutRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/auth/github/callback': typeof AuthAuthGithubCallbackRoute
 }
 export interface FileRoutesById {
@@ -262,7 +270,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/our-team': typeof OurTeamRoute
   '/_app/about': typeof AppAboutRoute
   '/_app/admin': typeof AppAdminRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/_auth/session-timeout': typeof AuthSessionTimeoutRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/_auth/auth/github/callback': typeof AuthAuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/session-timeout'
     | '/sign-in'
     | '/sign-up'
+    | '/blog/$slug'
     | '/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/session-timeout'
     | '/sign-in'
     | '/sign-up'
+    | '/blog/$slug'
     | '/auth/github/callback'
   id:
     | '__root__'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/_auth/session-timeout'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
+    | '/blog/$slug'
     | '/_auth/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
@@ -393,7 +405,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
-  BlogRoute: typeof BlogRoute
+  BlogRoute: typeof BlogRouteWithChildren
   OurTeamRoute: typeof OurTeamRoute
 }
 
@@ -433,6 +445,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
     }
     '/_auth/sign-up': {
       id: '/_auth/sign-up'
@@ -687,11 +706,21 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
-  BlogRoute: BlogRoute,
+  BlogRoute: BlogRouteWithChildren,
   OurTeamRoute: OurTeamRoute,
 }
 export const routeTree = rootRouteImport

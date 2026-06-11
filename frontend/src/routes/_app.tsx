@@ -43,7 +43,7 @@ function AppLayout() {
   const TITLES: Record<string, string> = {
     "/dashboard": "Workspace",
     "/projects": "Projects",
-    "/designer": "ChatBot",
+    "/designer": "Designer",
     "/architecture-explorer": "Architecture Explorer",
     "/schematic-editor": "Schematic Editor",
     "/layout-viewer": "Layout Viewer",

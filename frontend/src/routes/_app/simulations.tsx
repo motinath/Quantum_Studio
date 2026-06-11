@@ -16,10 +16,14 @@ import {
   AlertTriangle,
   BarChart3,
   Cpu,
+  SlidersHorizontal,
+  Gauge,
+  Download,
 } from "lucide-react";
 import { useDesign } from "@/lib/design-context";
 import { useProject } from "@/lib/project-context";
 import { cn } from "@/lib/utils";
+import { QuantumChip3D } from "@/components/app/quantum-chip-3d";
 
 export const Route = createFileRoute("/_app/simulations")({
   head: () => ({ meta: [{ title: "Simulations — Silicofeller" }] }),
@@ -40,16 +44,11 @@ type SimRun = {
 
 const SOLVERS = [
   { id: "eigenmode", label: "Eigenmode", desc: "Resonant frequencies & Q-factors of cavity modes" },
-  {
-    id: "driven_modal",
-    label: "Driven Modal",
-    desc: "S-parameter & transmission spectrum analysis",
-  },
-  {
-    id: "physics",
-    label: "Physics (scqubits)",
-    desc: "Transmon T₁/T₂, anharmonicity, coupling — analytical",
-  },
+  { id: "driven_modal", label: "Driven Modal", desc: "S-parameter & transmission spectrum analysis" },
+  { id: "hfss", label: "HFSS EM", desc: "Full-wave fields, adaptive mesh, S-parameters" },
+  { id: "q3d", label: "Q3D Extractor", desc: "Capacitance matrix and package parasitics" },
+  { id: "epr", label: "EPR Analysis", desc: "Energy participation ratios and loss channels" },
+  { id: "physics", label: "Physics (scqubits)", desc: "Transmon T₁/T₂, anharmonicity, coupling — analytical" },
   { id: "transient", label: "Transient", desc: "Time-domain field evolution" },
 ];
 
@@ -97,6 +96,36 @@ function buildOfflineResults(solver: string, payload: any): Record<string, unkno
       decoherence_time_ns: (T1 * 1000).toFixed(0),
     };
   }
+  if (solver === "hfss") {
+    return {
+      modes: 8,
+      dominant_mode_GHz: (freqs[0] + 1.43 || 6.61).toFixed(4),
+      peak_E_field_V_per_m: "2.41e5",
+      S11_min_dB: -32.6,
+      mesh_elements: 2456000,
+      convergence_delta_percent: 0.08,
+    };
+  }
+  if (solver === "q3d") {
+    return {
+      Cj_fF: 73.4,
+      Cpad_fF: 61.8,
+      Ccoupling_fF: 4.7,
+      substrate_loss_ppm: 18.2,
+      matrix_condition: 1.08,
+      extraction_passes: 11,
+    };
+  }
+  if (solver === "epr") {
+    return {
+      junction_participation_percent: 91.4,
+      substrate_participation_percent: 2.8,
+      seam_participation_percent: 0.6,
+      dielectric_loss_limited_T1_us: 187,
+      chi_MHz: -1.82,
+      anharmonicity_MHz: -286,
+    };
+  }
   // physics
   return {
     T1_us: Math.round(T1),
@@ -118,6 +147,13 @@ function SimulationsPage() {
   const [running, setRunning] = useState(false);
 
   const hasDesign = !!activeConversation?.result;
+  const activeDesign = activeConversation?.result ?? activeProject?.design_payload ?? null;
+  const metrics = [
+    { label: "Total Runs", value: "156", sub: "12 this week", icon: Activity, tone: "text-violet-600 bg-violet-50" },
+    { label: "Completed", value: "122", sub: "78.2% success", icon: CheckCircle2, tone: "text-emerald-600 bg-emerald-50" },
+    { label: "Queued", value: "8", sub: "Cluster wait", icon: Clock, tone: "text-amber-600 bg-amber-50" },
+    { label: "GPU Hours", value: "342.6", sub: "400 budget", icon: Gauge, tone: "text-sky-600 bg-sky-50" },
+  ];
 
   const runSim = async () => {
     if (!hasDesign) return;
@@ -158,9 +194,9 @@ function SimulationsPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-[#F8F9FB]">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 py-5">
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-accent-soft border border-accent/10 flex items-center justify-center">
                 <PlayCircle className="h-5 w-5 text-accent" />
@@ -168,16 +204,41 @@ function SimulationsPage() {
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-900">Simulations</h1>
                 <p className="text-sm text-slate-500">
-                  Eigenmode · Driven Modal · Physics · Transient
+                  HFSS · Q3D · EPR · Eigenmode · Driven Modal · Physics
                 </p>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="h-9 rounded-xl text-xs font-bold">
+                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> Filters
+              </Button>
+              <Button className="h-9 rounded-xl bg-accent text-white text-xs font-bold">
+                <PlayCircle className="mr-1.5 h-3.5 w-3.5" /> New simulation
+              </Button>
             </div>
           </div>
         </motion.div>
 
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {metrics.map((m) => (
+            <Card key={m.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{m.label}</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900">{m.value}</p>
+                  <p className="text-[10px] font-semibold text-slate-500">{m.sub}</p>
+                </div>
+                <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", m.tone)}>
+                  <m.icon className="h-4 w-4" />
+                </span>
+              </div>
+            </Card>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Config panel */}
-          <div className="lg:col-span-4 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               {/* Active design indicator */}
               {hasDesign ? (
@@ -210,7 +271,7 @@ function SimulationsPage() {
               )}
 
               <p className="text-xs font-bold text-slate-700 mb-3">Select Solver</p>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {SOLVERS.map((s) => (
                   <button
                     key={s.id}
@@ -275,7 +336,17 @@ function SimulationsPage() {
           </div>
 
           {/* Results panel */}
-          <div className="lg:col-span-8 space-y-3">
+          <div className="lg:col-span-6 space-y-3">
+            <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">3D Field Preview</p>
+                  <p className="text-[10px] text-slate-400">Interactive chip model with animated EM/capacitance intensity overlay</p>
+                </div>
+                <Badge variant="outline" className="rounded-full bg-emerald-50 text-[9px] font-bold text-emerald-700">Converged</Badge>
+              </div>
+              <QuantumChip3D result={activeDesign as any} height={300} />
+            </Card>
             {runs.length === 0 ? (
               <Card className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
                 <Activity className="h-10 w-10 text-slate-300 mx-auto mb-3" />
@@ -386,6 +457,54 @@ function SimulationsPage() {
                 </motion.div>
               ))
             )}
+          </div>
+          <div className="lg:col-span-3 space-y-4">
+            <Card className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 p-4">
+                <p className="text-xs font-bold text-slate-900">Selected Run</p>
+                <p className="text-[10px] text-slate-400">Transmon_HFSS_0126</p>
+              </div>
+              <div className="space-y-3 p-4">
+                {[
+                  ["Solver", selectedSolver.toUpperCase()],
+                  ["Status", running ? "Running" : "Ready"],
+                  ["Mesh", "2.46M elements"],
+                  ["Passes", "11 adaptive"],
+                  ["Delta S", "0.08%"],
+                  ["Memory", "64.2 GB"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0">
+                    <span className="text-[11px] text-slate-500">{k}</span>
+                    <span className="text-[11px] font-bold text-slate-900">{v}</span>
+                  </div>
+                ))}
+                <Button variant="outline" className="w-full rounded-xl text-xs font-bold">
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> Export results
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-bold text-slate-900">Transmission Spectrum</p>
+              <p className="text-[10px] text-slate-400">Driven modal S21 response</p>
+              <svg viewBox="0 0 260 130" className="mt-3 h-36 w-full rounded-lg bg-slate-50">
+                {[20,75,130,185,240].map(x => <line key={x} x1={x} y1="16" x2={x} y2="118" stroke="#E2E8F0" />)}
+                {[28,58,88,118].map(y => <line key={y} x1="18" y1={y} x2="244" y2={y} stroke="#E2E8F0" />)}
+                <path d="M20 102 C45 92, 55 40, 76 80 S114 101, 132 38 S177 96, 198 62 S228 42, 242 76 L242 118 L20 118 Z" fill="#7C3AED" opacity="0.12" />
+                <path d="M20 102 C45 92, 55 40, 76 80 S114 101, 132 38 S177 96, 198 62 S228 42, 242 76" fill="none" stroke="#7C3AED" strokeWidth="3" />
+              </svg>
+            </Card>
+
+            <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-bold text-slate-900">Q3D Capacitance Matrix</p>
+              <p className="text-[10px] text-slate-400">Normalized Cij extraction</p>
+              <div className="mt-3 grid grid-cols-6 gap-1">
+                {Array.from({ length: 36 }).map((_, i) => {
+                  const v = Math.abs(Math.sin(i * 1.7));
+                  return <span key={i} className="aspect-square rounded-sm" style={{ background: `rgba(124,58,237,${0.12 + v * 0.72})` }} />;
+                })}
+              </div>
+            </Card>
           </div>
         </div>
       </div>
