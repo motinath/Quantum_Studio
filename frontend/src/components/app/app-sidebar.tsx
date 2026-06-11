@@ -5,11 +5,7 @@ import {
   Users,
   CreditCard,
   Settings,
-  User,
   ShieldCheck,
-  Info,
-  ChevronUp,
-  LogOut,
   FolderKanban,
   Network,
   PenSquare,
@@ -34,21 +30,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { LogoMark, SilicofellerLogo } from "@/components/silicofeller-logo";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useProject } from "@/lib/project-context";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type NavItem = {
   title: string;
@@ -80,7 +66,7 @@ const NAV: { label: string | null; items: NavItem[] }[] = [
       { title: "Simulations", url: "/simulations", icon: PlayCircle },
       { title: "Physics Analysis", url: "/physics-analysis", icon: Atom },
       { title: "Fault Tolerance Studio", url: "/fault-tolerance", icon: Shield, badge: "NEW" },
-      
+
     ],
   },
   {
@@ -161,11 +147,10 @@ export function AppSidebar() {
                         asChild
                         isActive={isActive}
                         tooltip={item.title}
-                        className={`h-9 rounded-lg transition-colors ${
-                          isActive
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground font-semibold shadow-sm shadow-sidebar-primary/20"
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`}
+                        className={`h-9 rounded-lg transition-colors ${isActive
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground font-semibold shadow-sm shadow-sidebar-primary/20"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          }`}
                       >
                         <Link to={item.url} className="flex items-center gap-3 w-full">
                           <item.icon
@@ -178,11 +163,10 @@ export function AppSidebar() {
                               </span>
                               {item.badge && (
                                 <span
-                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                    isActive
-                                      ? "bg-white/20 text-white"
-                                      : "bg-accent/20 text-violet-300"
-                                  }`}
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isActive
+                                    ? "bg-white/20 text-white"
+                                    : "bg-accent/20 text-violet-300"
+                                    }`}
                                 >
                                   {item.badge}
                                 </span>
@@ -208,11 +192,10 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === "/admin"}
                     tooltip="Admin"
-                    className={`h-9 rounded-lg ${
-                      pathname === "/admin"
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    }`}
+                    className={`h-9 rounded-lg ${pathname === "/admin"
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      }`}
                   >
                     <Link to="/admin" className="flex items-center gap-3">
                       <ShieldCheck className="h-4 w-4 shrink-0" />
@@ -225,64 +208,6 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-sidebar-border p-2 bg-transparent">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2.5 rounded-lg p-2 text-left text-xs hover:bg-sidebar-accent cursor-pointer focus:outline-none w-full">
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="bg-accent text-[10px] font-bold text-white">
-                  {user?.initials}
-                </AvatarFallback>
-              </Avatar>
-              {!collapsed && (
-                <>
-                  <div className="flex flex-col truncate min-w-0 flex-1">
-                    <span className="truncate text-white font-semibold text-[13px]">
-                      {user?.name}
-                    </span>
-                    <span className="truncate text-[10px] text-sidebar-foreground/50 font-medium">
-                      {user?.role}
-                    </span>
-                  </div>
-                  <ChevronUp className="h-3.5 w-3.5 text-sidebar-foreground/50 shrink-0" />
-                </>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 rounded-xl">
-            <DropdownMenuLabel className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-400">
-              Account
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="text-xs cursor-pointer">
-              <Link to="/profile">
-                <User className="mr-2 h-3.5 w-3.5" /> Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="text-xs cursor-pointer">
-              <Link to="/settings">
-                <Settings className="mr-2 h-3.5 w-3.5" /> Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="text-xs cursor-pointer">
-              <Link to="/about">
-                <Info className="mr-2 h-3.5 w-3.5" /> About
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-xs text-rose-600 cursor-pointer focus:bg-rose-50"
-              onClick={() => {
-                signOut();
-                window.location.href = "/";
-              }}
-            >
-              <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }

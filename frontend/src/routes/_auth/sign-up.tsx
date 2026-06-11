@@ -79,7 +79,7 @@ function SignUpPage() {
         return;
       }
       toast.success(`Welcome — account created for ${form.organization}`);
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } finally {
       setLoading(false);
     }
@@ -208,12 +208,12 @@ function SignUpPage() {
             </div>
 
             <Button
-                type="submit"
-                disabled={loading}
-                className="h-11 w-full rounded-full text-sm font-semibold"
-              >
-                {loading ? "Creating account…" : "Create account"}
-              </Button>
+              type="submit"
+              disabled={loading}
+              className="h-11 w-full rounded-full text-sm font-semibold"
+            >
+              {loading ? "Creating account…" : "Create account"}
+            </Button>
           </form>
 
           <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">

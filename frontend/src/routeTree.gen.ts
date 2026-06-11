@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OurTeamRouteImport } from './routes/our-team'
+import { Route as DocumentationRouteImport } from './routes/documentation'
+import { Route as CommunityRouteImport } from './routes/community'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
@@ -43,6 +45,16 @@ import { Route as AppAboutRouteImport } from './routes/_app/about'
 const OurTeamRoute = OurTeamRouteImport.update({
   id: '/our-team',
   path: '/our-team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentationRoute = DocumentationRouteImport.update({
+  id: '/documentation',
+  path: '/documentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogRoute = BlogRouteImport.update({
@@ -192,6 +204,8 @@ const AppAboutRoute = AppAboutRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/blog': typeof BlogRoute
+  '/community': typeof CommunityRoute
+  '/documentation': typeof DocumentationRoute
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -222,6 +236,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/blog': typeof BlogRoute
+  '/community': typeof CommunityRoute
+  '/documentation': typeof DocumentationRoute
   '/our-team': typeof OurTeamRoute
   '/about': typeof AppAboutRoute
   '/admin': typeof AppAdminRoute
@@ -255,6 +271,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/blog': typeof BlogRoute
+  '/community': typeof CommunityRoute
+  '/documentation': typeof DocumentationRoute
   '/our-team': typeof OurTeamRoute
   '/_app/about': typeof AppAboutRoute
   '/_app/admin': typeof AppAdminRoute
@@ -285,96 +303,102 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/blog'
-    | '/our-team'
-    | '/about'
-    | '/admin'
-    | '/architecture-explorer'
-    | '/billing'
-    | '/component-library'
-    | '/dashboard'
-    | '/designer'
-    | '/fault-tolerance'
-    | '/integrations'
-    | '/layout-viewer'
-    | '/physics-analysis'
-    | '/profile'
-    | '/projects'
-    | '/quantum-editor'
-    | '/reports'
-    | '/results'
-    | '/schematic-editor'
-    | '/settings'
-    | '/simulations'
-    | '/team'
-    | '/verification'
-    | '/version-control'
-    | '/forgot-password'
-    | '/sign-in'
-    | '/sign-up'
+  | '/'
+  | '/blog'
+  | '/community'
+  | '/documentation'
+  | '/our-team'
+  | '/about'
+  | '/admin'
+  | '/architecture-explorer'
+  | '/billing'
+  | '/component-library'
+  | '/dashboard'
+  | '/designer'
+  | '/fault-tolerance'
+  | '/integrations'
+  | '/layout-viewer'
+  | '/physics-analysis'
+  | '/profile'
+  | '/projects'
+  | '/quantum-editor'
+  | '/reports'
+  | '/results'
+  | '/schematic-editor'
+  | '/settings'
+  | '/simulations'
+  | '/team'
+  | '/verification'
+  | '/version-control'
+  | '/forgot-password'
+  | '/sign-in'
+  | '/sign-up'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/blog'
-    | '/our-team'
-    | '/about'
-    | '/admin'
-    | '/architecture-explorer'
-    | '/billing'
-    | '/component-library'
-    | '/dashboard'
-    | '/designer'
-    | '/fault-tolerance'
-    | '/integrations'
-    | '/layout-viewer'
-    | '/physics-analysis'
-    | '/profile'
-    | '/projects'
-    | '/quantum-editor'
-    | '/reports'
-    | '/results'
-    | '/schematic-editor'
-    | '/settings'
-    | '/simulations'
-    | '/team'
-    | '/verification'
-    | '/version-control'
-    | '/forgot-password'
-    | '/sign-in'
-    | '/sign-up'
+  | '/'
+  | '/blog'
+  | '/community'
+  | '/documentation'
+  | '/our-team'
+  | '/about'
+  | '/admin'
+  | '/architecture-explorer'
+  | '/billing'
+  | '/component-library'
+  | '/dashboard'
+  | '/designer'
+  | '/fault-tolerance'
+  | '/integrations'
+  | '/layout-viewer'
+  | '/physics-analysis'
+  | '/profile'
+  | '/projects'
+  | '/quantum-editor'
+  | '/reports'
+  | '/results'
+  | '/schematic-editor'
+  | '/settings'
+  | '/simulations'
+  | '/team'
+  | '/verification'
+  | '/version-control'
+  | '/forgot-password'
+  | '/sign-in'
+  | '/sign-up'
   id:
-    | '__root__'
-    | '/'
-    | '/_app'
-    | '/_auth'
-    | '/blog'
-    | '/our-team'
-    | '/_app/about'
-    | '/_app/admin'
-    | '/_app/architecture-explorer'
-    | '/_app/billing'
-    | '/_app/component-library'
-    | '/_app/dashboard'
-    | '/_app/designer'
-    | '/_app/fault-tolerance'
-    | '/_app/integrations'
-    | '/_app/layout-viewer'
-    | '/_app/physics-analysis'
-    | '/_app/profile'
-    | '/_app/projects'
-    | '/_app/quantum-editor'
-    | '/_app/reports'
-    | '/_app/results'
-    | '/_app/schematic-editor'
-    | '/_app/settings'
-    | '/_app/simulations'
-    | '/_app/team'
-    | '/_app/verification'
-    | '/_app/version-control'
-    | '/_auth/forgot-password'
-    | '/_auth/sign-in'
-    | '/_auth/sign-up'
+  | '__root__'
+  | '/'
+  | '/_app'
+  | '/_auth'
+  | '/blog'
+  | '/community'
+  | '/documentation'
+  | '/our-team'
+  | '/_app/about'
+  | '/_app/admin'
+  | '/_app/architecture-explorer'
+  | '/_app/billing'
+  | '/_app/component-library'
+  | '/_app/dashboard'
+  | '/_app/designer'
+  | '/_app/fault-tolerance'
+  | '/_app/integrations'
+  | '/_app/layout-viewer'
+  | '/_app/physics-analysis'
+  | '/_app/profile'
+  | '/_app/projects'
+  | '/_app/quantum-editor'
+  | '/_app/reports'
+  | '/_app/results'
+  | '/_app/schematic-editor'
+  | '/_app/settings'
+  | '/_app/simulations'
+  | '/_app/team'
+  | '/_app/verification'
+  | '/_app/version-control'
+  | '/_auth/forgot-password'
+  | '/_auth/sign-in'
+  | '/_auth/sign-up'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -382,6 +406,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   BlogRoute: typeof BlogRoute
+  CommunityRoute: typeof CommunityRoute
+  DocumentationRoute: typeof DocumentationRoute
   OurTeamRoute: typeof OurTeamRoute
 }
 
@@ -392,6 +418,20 @@ declare module '@tanstack/react-router' {
       path: '/our-team'
       fullPath: '/our-team'
       preLoaderRoute: typeof OurTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documentation': {
+      id: '/documentation'
+      path: '/documentation'
+      fullPath: '/documentation'
+      preLoaderRoute: typeof DocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog': {
@@ -671,6 +711,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   BlogRoute: BlogRoute,
+  CommunityRoute: CommunityRoute,
+  DocumentationRoute: DocumentationRoute,
   OurTeamRoute: OurTeamRoute,
 }
 export const routeTree = rootRouteImport
