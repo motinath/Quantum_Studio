@@ -1,6 +1,6 @@
 import re
 
-with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r') as f:
+with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r', encoding='utf-8') as f:
     c = f.read()
 
 # I will just replace the entire buildDynamicGraph definition.
@@ -117,11 +117,11 @@ c = re.sub(
     flags=re.DOTALL
 )
 
-with open('frontend/src/routes/_app/architecture-explorer.tsx', 'w') as f:
+with open('frontend/src/routes/_app/architecture-explorer.tsx', 'w', encoding='utf-8') as f:
     f.write(c)
 import re
 
-with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r') as f:
+with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r', encoding='utf-8') as f:
     c = f.read()
 
 # 1. Replace TECH_METADATA
@@ -384,7 +384,7 @@ with open('frontend/src/routes/_app/architecture-explorer.tsx', 'w', encoding='u
     f.write(c)
 import re
 
-with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r') as f:
+with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r', encoding='utf-8') as f:
     c = f.read()
 
 # 1. Update imports for reactflow
@@ -536,7 +536,7 @@ with open('frontend/src/routes/_app/architecture-explorer.tsx', 'w', encoding='u
     f.write(c)
 import re
 
-with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r') as f:
+with open('frontend/src/routes/_app/architecture-explorer.tsx', 'r', encoding='utf-8') as f:
     c = f.read()
 
 # 1. Add useMemo
@@ -593,5 +593,5 @@ c = re.sub(
     c
 )
 
-with open('frontend/src/routes/_app/architecture-explorer.tsx', 'w') as f:
+with open('frontend/src/routes/_app/architecture-explorer.tsx', 'w', encoding='utf-8') as f:
     f.write(c)
