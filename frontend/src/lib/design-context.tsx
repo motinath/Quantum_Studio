@@ -16,6 +16,7 @@ export interface DesignContextProps {
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   activeConversation: Conversation | null;
+  hydrated: boolean;
   handleNew: () => void;
   handleDelete: (id: string) => void;
   updateActive: (patch: Partial<Conversation>) => void;
@@ -48,6 +49,7 @@ export function newConversation(): Conversation {
 export function DesignProvider({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   // Load from LocalStorage
   useEffect(() => {
@@ -66,6 +68,8 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
       const c = newConversation();
       setConversations([c]);
       setActiveId(c.id);
+    } finally {
+      setHydrated(true);
     }
   }, []);
 
@@ -74,7 +78,7 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
     if (conversations.length === 0) return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-    } catch {}
+    } catch { }
   }, [conversations]);
 
   const activeConversation = useMemo(() => {
@@ -133,6 +137,7 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
       activeId,
       setActiveId,
       activeConversation,
+      hydrated,
       handleNew,
       handleDelete,
       updateActive,
@@ -141,7 +146,7 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
       renameConversation,
       setConversations,
     }),
-    [conversations, activeId, activeConversation],
+    [conversations, activeId, activeConversation, hydrated],
   );
 
   return <DesignContext.Provider value={val}>{children}</DesignContext.Provider>;

@@ -19,6 +19,7 @@ import {
   GitBranch,
   FileText,
   Plug,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -175,6 +176,21 @@ export function AppSidebar() {
                           )}
                         </Link>
                       </SidebarMenuButton>
+                      {/* Chat History sub-item — only visible when ChatBot is active */}
+                      {item.url === "/designer" && (pathname === "/designer" || pathname === "/chat-history") && !collapsed && (
+                        <div className="ml-7 mt-0.5">
+                          <Link
+                            to="/chat-history"
+                            className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors ${pathname === "/chat-history"
+                                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                              }`}
+                          >
+                            <History className="h-3.5 w-3.5 shrink-0" />
+                            Chat History
+                          </Link>
+                        </div>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}

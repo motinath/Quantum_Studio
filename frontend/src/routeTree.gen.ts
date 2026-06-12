@@ -37,6 +37,7 @@ import { Route as AppFaultToleranceRouteImport } from './routes/_app/fault-toler
 import { Route as AppDesignerRouteImport } from './routes/_app/designer'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppComponentLibraryRouteImport } from './routes/_app/component-library'
+import { Route as AppChatHistoryRouteImport } from './routes/_app/chat-history'
 import { Route as AppBillingRouteImport } from './routes/_app/billing'
 import { Route as AppArchitectureExplorerRouteImport } from './routes/_app/architecture-explorer'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
@@ -180,6 +181,11 @@ const AppComponentLibraryRoute = AppComponentLibraryRouteImport.update({
   path: '/component-library',
   getParentRoute: () => AppRoute,
 } as any)
+const AppChatHistoryRoute = AppChatHistoryRouteImport.update({
+  id: '/chat-history',
+  path: '/chat-history',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBillingRoute = AppBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AppAdminRoute
   '/architecture-explorer': typeof AppArchitectureExplorerRoute
   '/billing': typeof AppBillingRoute
+  '/chat-history': typeof AppChatHistoryRoute
   '/component-library': typeof AppComponentLibraryRoute
   '/dashboard': typeof AppDashboardRoute
   '/designer': typeof AppDesignerRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AppAdminRoute
   '/architecture-explorer': typeof AppArchitectureExplorerRoute
   '/billing': typeof AppBillingRoute
+  '/chat-history': typeof AppChatHistoryRoute
   '/component-library': typeof AppComponentLibraryRoute
   '/dashboard': typeof AppDashboardRoute
   '/designer': typeof AppDesignerRoute
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/_app/admin': typeof AppAdminRoute
   '/_app/architecture-explorer': typeof AppArchitectureExplorerRoute
   '/_app/billing': typeof AppBillingRoute
+  '/_app/chat-history': typeof AppChatHistoryRoute
   '/_app/component-library': typeof AppComponentLibraryRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/designer': typeof AppDesignerRoute
@@ -303,102 +312,105 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-  | '/'
-  | '/blog'
-  | '/community'
-  | '/documentation'
-  | '/our-team'
-  | '/about'
-  | '/admin'
-  | '/architecture-explorer'
-  | '/billing'
-  | '/component-library'
-  | '/dashboard'
-  | '/designer'
-  | '/fault-tolerance'
-  | '/integrations'
-  | '/layout-viewer'
-  | '/physics-analysis'
-  | '/profile'
-  | '/projects'
-  | '/quantum-editor'
-  | '/reports'
-  | '/results'
-  | '/schematic-editor'
-  | '/settings'
-  | '/simulations'
-  | '/team'
-  | '/verification'
-  | '/version-control'
-  | '/forgot-password'
-  | '/sign-in'
-  | '/sign-up'
+    | '/'
+    | '/blog'
+    | '/community'
+    | '/documentation'
+    | '/our-team'
+    | '/about'
+    | '/admin'
+    | '/architecture-explorer'
+    | '/billing'
+    | '/chat-history'
+    | '/component-library'
+    | '/dashboard'
+    | '/designer'
+    | '/fault-tolerance'
+    | '/integrations'
+    | '/layout-viewer'
+    | '/physics-analysis'
+    | '/profile'
+    | '/projects'
+    | '/quantum-editor'
+    | '/reports'
+    | '/results'
+    | '/schematic-editor'
+    | '/settings'
+    | '/simulations'
+    | '/team'
+    | '/verification'
+    | '/version-control'
+    | '/forgot-password'
+    | '/sign-in'
+    | '/sign-up'
   fileRoutesByTo: FileRoutesByTo
   to:
-  | '/'
-  | '/blog'
-  | '/community'
-  | '/documentation'
-  | '/our-team'
-  | '/about'
-  | '/admin'
-  | '/architecture-explorer'
-  | '/billing'
-  | '/component-library'
-  | '/dashboard'
-  | '/designer'
-  | '/fault-tolerance'
-  | '/integrations'
-  | '/layout-viewer'
-  | '/physics-analysis'
-  | '/profile'
-  | '/projects'
-  | '/quantum-editor'
-  | '/reports'
-  | '/results'
-  | '/schematic-editor'
-  | '/settings'
-  | '/simulations'
-  | '/team'
-  | '/verification'
-  | '/version-control'
-  | '/forgot-password'
-  | '/sign-in'
-  | '/sign-up'
+    | '/'
+    | '/blog'
+    | '/community'
+    | '/documentation'
+    | '/our-team'
+    | '/about'
+    | '/admin'
+    | '/architecture-explorer'
+    | '/billing'
+    | '/chat-history'
+    | '/component-library'
+    | '/dashboard'
+    | '/designer'
+    | '/fault-tolerance'
+    | '/integrations'
+    | '/layout-viewer'
+    | '/physics-analysis'
+    | '/profile'
+    | '/projects'
+    | '/quantum-editor'
+    | '/reports'
+    | '/results'
+    | '/schematic-editor'
+    | '/settings'
+    | '/simulations'
+    | '/team'
+    | '/verification'
+    | '/version-control'
+    | '/forgot-password'
+    | '/sign-in'
+    | '/sign-up'
   id:
-  | '__root__'
-  | '/'
-  | '/_app'
-  | '/_auth'
-  | '/blog'
-  | '/community'
-  | '/documentation'
-  | '/our-team'
-  | '/_app/about'
-  | '/_app/admin'
-  | '/_app/architecture-explorer'
-  | '/_app/billing'
-  | '/_app/component-library'
-  | '/_app/dashboard'
-  | '/_app/designer'
-  | '/_app/fault-tolerance'
-  | '/_app/integrations'
-  | '/_app/layout-viewer'
-  | '/_app/physics-analysis'
-  | '/_app/profile'
-  | '/_app/projects'
-  | '/_app/quantum-editor'
-  | '/_app/reports'
-  | '/_app/results'
-  | '/_app/schematic-editor'
-  | '/_app/settings'
-  | '/_app/simulations'
-  | '/_app/team'
-  | '/_app/verification'
-  | '/_app/version-control'
-  | '/_auth/forgot-password'
-  | '/_auth/sign-in'
-  | '/_auth/sign-up'
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_auth'
+    | '/blog'
+    | '/community'
+    | '/documentation'
+    | '/our-team'
+    | '/_app/about'
+    | '/_app/admin'
+    | '/_app/architecture-explorer'
+    | '/_app/billing'
+    | '/_app/chat-history'
+    | '/_app/component-library'
+    | '/_app/dashboard'
+    | '/_app/designer'
+    | '/_app/fault-tolerance'
+    | '/_app/integrations'
+    | '/_app/layout-viewer'
+    | '/_app/physics-analysis'
+    | '/_app/profile'
+    | '/_app/projects'
+    | '/_app/quantum-editor'
+    | '/_app/reports'
+    | '/_app/results'
+    | '/_app/schematic-editor'
+    | '/_app/settings'
+    | '/_app/simulations'
+    | '/_app/team'
+    | '/_app/verification'
+    | '/_app/version-control'
+    | '/_auth/forgot-password'
+    | '/_auth/sign-in'
+    | '/_auth/sign-up'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -609,6 +621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComponentLibraryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/chat-history': {
+      id: '/_app/chat-history'
+      path: '/chat-history'
+      fullPath: '/chat-history'
+      preLoaderRoute: typeof AppChatHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/billing': {
       id: '/_app/billing'
       path: '/billing'
@@ -645,6 +664,7 @@ interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppArchitectureExplorerRoute: typeof AppArchitectureExplorerRoute
   AppBillingRoute: typeof AppBillingRoute
+  AppChatHistoryRoute: typeof AppChatHistoryRoute
   AppComponentLibraryRoute: typeof AppComponentLibraryRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDesignerRoute: typeof AppDesignerRoute
@@ -670,6 +690,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppArchitectureExplorerRoute: AppArchitectureExplorerRoute,
   AppBillingRoute: AppBillingRoute,
+  AppChatHistoryRoute: AppChatHistoryRoute,
   AppComponentLibraryRoute: AppComponentLibraryRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDesignerRoute: AppDesignerRoute,
