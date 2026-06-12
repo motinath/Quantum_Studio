@@ -1,21 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  TrendingUp, Activity, ShieldAlert, CheckCircle2,
-  MoreHorizontal, Plus, Network, Cpu, PlayCircle,
-  ShieldCheck, Upload, Download, AlertTriangle, Bell,
-  Clock, Sparkles, FileText, Pencil, Zap, ArrowRight,
-  Folder, Boxes, LayoutGrid, Import
+  Folder,
+  Cpu,
+  Boxes,
+  Plus,
+  LayoutGrid,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  ShieldAlert,
+  Pencil,
+  PlayCircle,
+  FileText,
+  Import,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth/auth-context";
-import { useDesign } from "@/lib/design-context";
 import { useProject } from "@/lib/project-context";
-import { fetchHealth, type HealthResponse } from "@/lib/api/backend";
 import { QISKIT_CATALOG } from "@/components/quantum-editor/qiskit-metal-catalog";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth/auth-context";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({ meta: [{ title: "Workspace — Silicofeller" }] }),
@@ -68,30 +73,6 @@ const ACTIVITY = [
   },
 ];
 
-const NOTIFS = [
-  {
-    icon: ShieldAlert,
-    color: "text-rose-600 bg-rose-50",
-    title: "3 critical verification issues",
-    sub: "Require immediate attention",
-    time: "1h ago",
-  },
-  {
-    icon: Clock,
-    color: "text-amber-600 bg-amber-50",
-    title: "Simulation queue is high",
-    sub: "Your job may take longer",
-    time: "2h ago",
-  },
-  {
-    icon: Sparkles,
-    color: "text-accent bg-accent-soft",
-    title: "New version available",
-    sub: "Quantum Studio v1.3.0",
-    time: "1d ago",
-  },
-];
-
 // Tiny SVG sparkline
 function Sparkline({ points, color }: { points: number[]; color: string }) {
   const w = 110,
@@ -116,70 +97,6 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-
-// Donut chart
-function Donut({
-  segments,
-  total,
-  label,
-}: {
-  segments: { value: number; color: string }[];
-  total: number;
-  label: string;
-}) {
-  const r = 56,
-    c = 2 * Math.PI * r;
-  let offset = 0;
-  return (
-    <div className="relative w-[160px] h-[160px]">
-      <svg viewBox="0 0 140 140" className="-rotate-90 w-full h-full">
-        <circle cx="70" cy="70" r={r} fill="none" stroke="#F1F5F9" strokeWidth="14" />
-        {segments.map((s, i) => {
-          const len = (s.value / total) * c;
-          const el = (
-            <circle
-              key={i}
-              cx="70"
-              cy="70"
-              r={r}
-              fill="none"
-              stroke={s.color}
-              strokeWidth="14"
-              strokeDasharray={`${len} ${c - len}`}
-              strokeDashoffset={-offset}
-              strokeLinecap="butt"
-            />
-          );
-          offset += len;
-          return el;
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black text-slate-900">{total}</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-          {label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// StatusBadge helper (kept for simulation table)
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    "Completed": "bg-emerald-50 text-emerald-700 border-emerald-100",
-    "Running":   "bg-blue-50 text-blue-700 border-blue-100",
-    "Queued":    "bg-amber-50 text-amber-700 border-amber-100",
-    "Failed":    "bg-rose-50 text-rose-700 border-rose-100",
-    "In Progress": "bg-blue-50 text-blue-700 border-blue-100",
-    "Review":    "bg-amber-50 text-amber-700 border-amber-100",
-  };
-  return (
-    <Badge variant="outline" className={`rounded-full text-[10px] font-bold px-2.5 py-0.5 border ${map[status] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
-      {status}
-    </Badge>
   );
 }
 
@@ -265,47 +182,28 @@ function QubitTopology() {
 
 function WorkspaceHomePage() {
   const { user } = useAuth();
-  const { conversations } = useDesign();
-  const { projects, activeProject, backendOnline } = useProject();
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-
-  useEffect(() => {
-    fetchHealth().then(setHealth);
-  }, []);
-
-  const designSessions = conversations.filter(c => c.result).length;
-  const totalProjects = projects.length || designSessions || 0;
+  const { projects } = useProject();
 
   const metrics = [
     {
       label: "Total Projects",
-      value: String(totalProjects),
-      subtext: activeProject ? `Active: ${activeProject.name.slice(0, 18)}` : "No active project",
+      value: projects.length.toString(),
+      subtext: `Active: ${projects.length > 0 ? projects[0].name : "None"}`,
       icon: Folder,
       iconBg: "#EDE9FE",
       iconColor: "#7C3AED",
       sparkColor: "#7C3AED",
-      sparkPoints: [Math.max(0, totalProjects-4), Math.max(0, totalProjects-3), Math.max(0, totalProjects-2), Math.max(0, totalProjects-1), totalProjects, totalProjects],
+      sparkPoints: [1, 2, 1.5, 3, 3.5, Math.max(4, projects.length)],
     },
     {
       label: "Total Designs",
-      value: String(designSessions),
-      subtext: `${conversations.length} conversations`,
+      value: projects.reduce((acc, p) => acc + (p.topology ? 1 : 0), 0).toString(),
+      subtext: "Synced from workspace",
       icon: Cpu,
       iconBg: "#EFF6FF",
       iconColor: "#2563EB",
       sparkColor: "#2563EB",
-      sparkPoints: [0, 1, 1, 2, designSessions-1 > 0 ? designSessions-1 : 0, designSessions],
-    },
-    {
-      label: "Backend Status",
-      value: health?.status === "online" ? "Online" : "Offline",
-      subtext: health?.status === "online" ? `v${health.version}` : "Run python run.py",
-      icon: ShieldAlert,
-      iconBg: health?.status === "online" ? "#EFFDF4" : "#FEF3C7",
-      iconColor: health?.status === "online" ? "#10B981" : "#F59E0B",
-      sparkColor: health?.status === "online" ? "#10B981" : "#F59E0B",
-      sparkPoints: [1, 1, 1, 1, 1, health?.status === "online" ? 1 : 0],
+      sparkPoints: [6, 8, 7, 9, 10, projects.length + 2],
     },
     {
       label: "Component Library",
@@ -343,7 +241,7 @@ function WorkspaceHomePage() {
               className="mt-1 text-[28px] font-bold text-[#111827] leading-tight"
               style={{ fontWeight: 700 }}
             >
-              Hello, {user?.name?.split(" ")[0] || "Viswanath"}
+              Hello, {user?.name?.split(" ")[0] || "there"}
             </h1>
             <p
               className="mt-0.5 text-[20px] font-semibold text-[#7C3AED]"
@@ -360,6 +258,13 @@ function WorkspaceHomePage() {
             >
               <Plus className="h-4 w-4" /> Create Design
             </Link>
+            <button
+              disabled
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-4.5 py-2 text-[14px] font-medium text-[#111827] opacity-50 cursor-not-allowed shadow-sm select-none"
+              style={{ fontWeight: 500 }}
+            >
+              <Import className="h-4 w-4 text-[#111827]" /> Import Design
+            </button>
             <Link
               to="/designer"
               className="inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-4.5 py-2 text-[14px] font-medium text-[#111827] hover:bg-slate-50 transition-colors shadow-sm select-none"
@@ -367,18 +272,18 @@ function WorkspaceHomePage() {
             >
               <LayoutGrid className="h-4 w-4 text-[#111827]" /> Open Designer
             </Link>
-            <Link
-              to="/designer"
-              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-[#7C3AED] px-4.5 py-2 text-[14px] font-medium text-white hover:bg-[#6D28D9] transition-colors shadow-sm select-none"
+            <button
+              disabled
+              className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-[#7C3AED] px-4.5 py-2 text-[14px] font-medium text-white opacity-50 cursor-not-allowed shadow-sm select-none"
               style={{ fontWeight: 500 }}
             >
               <Sparkles className="h-4 w-4" /> Ask AI ↗
-            </Link>
+            </button>
           </div>
         </motion.div>
 
         {/* SECTION 2 — METRICS ROW */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {metrics.map((m, i) => (
             <motion.div
               key={m.label}
@@ -424,67 +329,64 @@ function WorkspaceHomePage() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className="h-full"
           >
-            <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2
-                    className="text-[16px] font-semibold text-[#111827]"
-                    style={{ fontWeight: 600 }}
-                  >
-                    Design Overview
-                  </h2>
-                  <Link
-                    to="/layout-viewer"
-                    className="text-[13px] font-medium text-[#6366F1] hover:underline"
-                    style={{ fontWeight: 500 }}
-                  >
-                    View in Layout
-                  </Link>
+            <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] h-full">
+              <div className="flex items-center justify-between mb-4">
+                <h2
+                  className="text-[16px] font-semibold text-[#111827]"
+                  style={{ fontWeight: 600 }}
+                >
+                  Design Overview
+                </h2>
+                <Link
+                  to="/layout-viewer"
+                  className="text-[13px] font-medium text-[#6366F1] hover:underline"
+                  style={{ fontWeight: 500 }}
+                >
+                  View in Layout
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6 items-center">
+                {/* SVG Topology Diagram (Left 40%) */}
+                <div className="flex justify-center md:justify-start">
+                  <QubitTopology />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6 items-center">
-                  {/* SVG Topology Diagram (Left 40%) */}
-                  <div className="flex justify-center md:justify-start">
-                    <QubitTopology />
-                  </div>
-
-                  {/* Key-Value parameters list (Right 60%) */}
-                  <div className="space-y-3 text-[13px] text-[#111827]">
-                    {[
-                      { label: "Total Qubits", value: "8" },
-                      { label: "Couplers", value: "10" },
-                      { label: "Resonators", value: "8" },
-                      { label: "Readout Lines", value: "4" },
-                      { label: "Topology", value: "2x4 Lattice", icon: true },
-                      { label: "Substrate", value: "Silicon (Si)" },
-                    ].map((row, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-center pb-2.5 border-b border-[#EEEFF2] last:border-0 last:pb-0"
+                {/* Key-Value parameters list (Right 60%) */}
+                <div className="space-y-3 text-[13px] text-[#111827]">
+                  {[
+                    { label: "Total Qubits", value: "8" },
+                    { label: "Couplers", value: "10" },
+                    { label: "Resonators", value: "8" },
+                    { label: "Readout Lines", value: "4" },
+                    { label: "Topology", value: "2x4 Lattice", icon: true },
+                    { label: "Substrate", value: "Silicon (Si)" },
+                  ].map((row, i) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center pb-2.5 border-b border-[#EEEFF2] last:border-0 last:pb-0"
+                    >
+                      <span className="text-[#6B7280] font-medium" style={{ fontWeight: 500 }}>
+                        {row.label}
+                      </span>
+                      <span
+                        className="font-semibold text-[#111827] flex items-center gap-1.5"
+                        style={{ fontWeight: 600 }}
                       >
-                        <span className="text-[#6B7280] font-medium" style={{ fontWeight: 500 }}>
-                          {row.label}
-                        </span>
-                        <span
-                          className="font-semibold text-[#111827] flex items-center gap-1.5"
-                          style={{ fontWeight: 600 }}
-                        >
-                          {row.value}
-                          {row.icon && (
-                            <svg width="14" height="12" viewBox="0 0 14 12" fill="none">
-                              <path
-                                d="M3.5 1L0.5 6L3.5 11H10.5L13.5 6L10.5 1H3.5Z"
-                                stroke="#7C3AED"
-                                strokeWidth="1.2"
-                              />
-                            </svg>
-                          )}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                        {row.value}
+                        {row.icon && (
+                          <svg width="14" height="12" viewBox="0 0 14 12" fill="none">
+                            <path
+                              d="M3.5 1L0.5 6L3.5 11H10.5L13.5 6L10.5 1H3.5Z"
+                              stroke="#7C3AED"
+                              strokeWidth="1.2"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Card>
@@ -634,209 +536,31 @@ function WorkspaceHomePage() {
                 </div>
               </Card>
             </motion.div>
-          </div>
-        </div>
 
-        {/* SECTION 4 — ADDITIONAL MAIN SECTIONS */}
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Simulation Status Card */}
-          <Card className="lg:col-span-4 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Simulation Status</h2>
-              <Link to="/simulations" className="text-[13px] font-medium text-[#6366F1] hover:underline" style={{ fontWeight: 500 }}>
-                View all
-              </Link>
-            </div>
-            <div className="flex items-center justify-between">
-              <Donut
-                total={24}
-                label="Total"
-                segments={[
-                  { value: 14, color: "#10B981" },
-                  { value: 4, color: "#3B82F6" },
-                  { value: 3, color: "#F59E0B" },
-                  { value: 3, color: "#EF4444" },
-                ]}
-              />
-              <div className="space-y-2 text-xs">
-                {[
-                  { c: "#10B981", n: "Completed", v: "14 (58%)" },
-                  { c: "#3B82F6", n: "Running", v: "4 (17%)" },
-                  { c: "#F59E0B", n: "Queued", v: "3 (13%)" },
-                  { c: "#EF4444", n: "Failed", v: "3 (12%)" },
-                ].map((s) => (
-                  <div key={s.n} className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ background: s.c }} />
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-[#111827]" style={{ fontWeight: 600 }}>{s.n}</span>
-                      <span className="text-[10px] text-[#6B7280] font-medium">{s.v}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-[#EEEFF2]">
-              <div className="flex justify-between text-[11px] mb-1.5 font-medium text-[#6B7280]">
-                <span>Compute Usage</span>
-                <span className="font-semibold text-[#111827]">85%</span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#3B82F6]"
-                  style={{ width: "85%" }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] mt-1.5 text-[#6B7280] font-medium">
-                <span>GPU Hours (This Week)</span>
-                <span className="font-semibold text-[#111827]">342 / 400</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Verification Summary Card */}
-          <Card className="lg:col-span-4 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Verification Summary</h2>
-              <Link to="/verification" className="text-[13px] font-medium text-[#6366F1] hover:underline" style={{ fontWeight: 500 }}>
-                View all
-              </Link>
-            </div>
-            <div className="flex items-center justify-around">
-              <Donut
-                total={12}
-                label="Total Alerts"
-                segments={[
-                  { value: 3, color: "#EF4444" },
-                  { value: 4, color: "#F59E0B" },
-                  { value: 5, color: "#FACC15" },
-                  { value: 0, color: "#3B82F6" },
-                ]}
-              />
-              <div className="space-y-1.5 text-xs">
-                {[
-                  { c: "#EF4444", n: "Critical", v: 3 },
-                  { c: "#F59E0B", n: "Major", v: 4 },
-                  { c: "#FACC15", n: "Minor", v: 5 },
-                  { c: "#3B82F6", n: "Info", v: 0 },
-                ].map((s) => (
-                  <div key={s.n} className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.c }} />
-                    <span className="text-[#6B7280] font-medium w-12">{s.n}</span>
-                    <span className="font-semibold text-[#111827]">{s.v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-[#EEEFF2] flex items-center justify-between">
-              <span className="text-[10px] text-[#6B7280] font-medium">Last checked: 1h ago</span>
-              <Button
-                size="sm"
-                className="h-8 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-semibold px-3"
-              >
-                Run Verification
-              </Button>
-            </div>
-          </Card>
-
-          {/* Quick Actions Card */}
-          <Card className="lg:col-span-2 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <h2 className="text-[14px] font-semibold text-[#111827] mb-4" style={{ fontWeight: 600 }}>Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { icon: Plus, label: "New Project", to: "/projects" },
-                { icon: Network, label: "New Schematic", to: "/schematic-editor" },
-                { icon: Cpu, label: "Run Simulation", to: "/simulations" },
-                { icon: ShieldCheck, label: "Run Verification", to: "/verification" },
-                { icon: Sparkles, label: "Open Designer", to: "/designer" },
-                { icon: Upload, label: "Import Design", to: "/projects" },
-              ].map((a) => (
-                <Link
-                  key={a.label}
-                  to={a.to}
-                  className="aspect-square rounded-xl border border-[#EEEFF2] bg-white hover:border-[#7C3AED] hover:bg-violet-50/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-center p-2"
-                >
-                  <a.icon className="h-4 w-4 text-[#7C3AED]" />
-                  <span className="text-[9px] font-semibold text-[#4B5563] leading-tight" style={{ fontWeight: 600 }}>
-                    {a.label}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </Card>
-
-          {/* Notifications Card */}
-          <Card className="lg:col-span-2 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Notifications</h2>
-              <button className="text-[13px] font-medium text-[#6366F1] hover:underline">
-                View all
-              </button>
-            </div>
-            <div className="space-y-3">
-              {NOTIFS.map((n, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <div
-                    className={`h-6 w-6 rounded-md flex items-center justify-center shrink-0 ${n.color}`}
+            {/* Quick Actions Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.35 }}
+            >
+              <Card className="rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2
+                    className="text-[14px] font-semibold text-[#111827]"
+                    style={{ fontWeight: 600 }}
                   >
-                    <n.icon className="h-3 w-3" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-semibold text-[#111827] leading-tight" style={{ fontWeight: 600 }}>
-                      {n.title}
-                    </div>
-                    <div className="text-[10px] text-[#6B7280] font-medium mt-0.5">{n.sub}</div>
-                    <div className="text-[9px] text-[#9CA3AF] mt-0.5">{n.time}</div>
-                  </div>
+                    Quick Actions
+                  </h2>
                 </div>
-              ))}
-            </div>
-          </Card>
+                <div className="space-y-3">
+                  <Button className="w-full justify-start gap-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg h-[38px] font-medium shadow-sm">
+                    <Import className="h-4 w-4" /> Import Design
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
         </div>
-
-        {/* SECTION 5 — RECENT SIMULATIONS TABLE */}
-        <Card className="mt-4 rounded-xl border border-[#EEEFF2] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[14px] font-semibold text-[#111827]" style={{ fontWeight: 600 }}>Recent Simulations</h2>
-            <Link to="/simulations" className="text-[13px] font-medium text-[#6366F1] hover:underline" style={{ fontWeight: 500 }}>
-              View all
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {[
-              {
-                name: "HeavyHex_64Q - EM Analysis",
-                status: "Completed",
-                time: "2h ago",
-                type: "Eigenmode",
-                usage: "64.2 GB",
-                runtime: "12m 34s",
-              },
-              {
-                name: "SurfaceCode_49Q - DRC",
-                status: "Completed",
-                time: "4h ago",
-                type: "Verification",
-                usage: "12.4 GB",
-                runtime: "3m 12s",
-              },
-            ].map((s) => (
-              <div
-                key={s.name}
-                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                <span className="text-xs font-semibold text-[#111827] flex-1" style={{ fontWeight: 600 }}>{s.name}</span>
-                <StatusBadge status={s.status} />
-                <span className="text-xs text-[#6B7280] font-medium w-16 text-right">{s.time}</span>
-                <span className="text-xs text-[#6B7280] font-medium w-24 text-right">{s.type}</span>
-                <span className="text-xs text-[#6B7280] font-medium w-20 text-right">{s.usage}</span>
-                <span className="text-xs text-[#6B7280] font-medium w-20 text-right">{s.runtime}</span>
-                <button className="ml-3 text-slate-400 hover:text-[#7C3AED]">
-                  <Download className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
     </div>
   );

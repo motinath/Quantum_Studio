@@ -326,11 +326,13 @@ function DesignerPage() {
                         <Pencil className="h-2.5 w-2.5" />
                       </button>
                       <button
-                        className="h-5 w-5 rounded flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                        disabled={conversations.length <= 1}
+                        className="h-5 w-5 rounded flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:bg-transparent"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(c.id);
                         }}
+                        title={conversations.length <= 1 ? "Cannot delete the only design session" : "Delete session"}
                       >
                         <Trash2 className="h-2.5 w-2.5" />
                       </button>

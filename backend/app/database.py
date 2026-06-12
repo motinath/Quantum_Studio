@@ -79,6 +79,34 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Create all tables if they do not exist."""
+    import sqlalchemy as sa
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Auto-upgrade database tables by adding new columns if missing.
+        # We query the table first to find which columns exist and avoid raising abort-triggering exceptions.
+        try:
+            res = await conn.execute(sa.text("SELECT * FROM users LIMIT 1"))
+            existing_cols = set(res.keys())
+        except Exception:
+            existing_cols = set()
+
+        columns_to_add = [
+            ("oauth_provider", "VARCHAR(32)"),
+            ("oauth_subject", "VARCHAR(255)"),
+            ("is_verified", "BOOLEAN DEFAULT FALSE"),
+            ("email_otp", "VARCHAR(6)"),
+            ("otp_expires_at", "TIMESTAMP"),
+            ("otp_attempts", "INTEGER DEFAULT 0")
+        ]
+        for col_name, col_type in columns_to_add:
+            if col_name not in existing_cols:
+                try:
+                    await conn.execute(sa.text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                    log.info(f"Database migration: Added column {col_name} to users table.")
+                except Exception as e:
+                    log.error(f"Database migration: Failed to add column {col_name}: {e}")
+
     log.info("Database tables ensured.")
+

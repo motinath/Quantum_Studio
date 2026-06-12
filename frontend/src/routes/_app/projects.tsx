@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Plus, Cpu, Search, Trash2, MoreHorizontal, FolderOpen,
   FlaskConical, Layers, Calendar, ArrowRight, Loader2,
-  Sparkles, CircuitBoard, CheckCircle2, Clock, Network,
+  Sparkles, CircuitBoard, CheckCircle2, LayoutTemplate, Clock, Network,
   Edit3, Check, X, Save,
 } from "lucide-react";
 import {
@@ -181,19 +181,116 @@ function CreateModal({ onClose, onCreate }: {
 
 // ── Project card ──────────────────────────────────────────────────────────────
 
-function ProjectCard({ project, isActive, onActivate, onDelete, onEdit }: {
+function ProjectOptionsModal({ project, onClose }: { project: Project; onClose: () => void }) {
+  const navigate = useNavigate();
+
+  const handleGoToChatbot = () => {
+    navigate({ to: "/designer" });
+    onClose();
+  };
+
+  const handleGoToDesigner = () => {
+    navigate({ to: "/layout-viewer" });
+    onClose();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 8 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-100"
+      >
+        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Cpu className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900">{project.name}</h2>
+                <p className="text-xs text-slate-500">Choose your workspace layout</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 grid grid-cols-2 gap-4">
+          <button
+            onClick={handleGoToChatbot}
+            className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-accent hover:bg-accent-soft group transition-all duration-200 text-center cursor-pointer focus:outline-none"
+          >
+            <div className="h-14 w-14 rounded-2xl bg-accent-soft group-hover:bg-accent flex items-center justify-center mb-4 transition-colors">
+              <Sparkles className="h-7 w-7 text-accent group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Chatbot</h3>
+            <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
+              Design quantum chips using AI chatbot prompts.
+            </p>
+          </button>
+
+          <button
+            onClick={handleGoToDesigner}
+            className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-accent hover:bg-accent-soft group transition-all duration-200 text-center cursor-pointer focus:outline-none"
+          >
+            <div className="h-14 w-14 rounded-2xl bg-indigo-50 group-hover:bg-indigo-600 flex items-center justify-center mb-4 transition-colors">
+              <LayoutTemplate className="h-7 w-7 text-indigo-600 group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Designer</h3>
+            <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
+              Inspect physical 2D layout and layer views.
+            </p>
+          </button>
+        </div>
+
+        <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/50 flex justify-end">
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            className="rounded-xl text-xs font-bold h-9 px-4 text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
+          >
+            Cancel
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function ProjectCard({ project, isActive, onActivate, onSelect, onDelete, onEdit }: {
   project: Project;
   isActive: boolean;
   onActivate: () => void;
+  onSelect: () => void;
   onDelete: () => void;
   onEdit: () => void;
 }) {
   const navigate = useNavigate();
   const { setActiveId } = useDesign();
 
-  const openInDesigner = () => {
+  const openInChatbot = () => {
     onActivate();
     navigate({ to: "/designer" });
+  };
+
+  const openInDesigner = () => {
+    onActivate();
+    navigate({ to: "/layout-viewer" });
   };
 
   const openInCanvas = () => {
@@ -202,10 +299,13 @@ function ProjectCard({ project, isActive, onActivate, onDelete, onEdit }: {
   };
 
   return (
-    <Card className={cn(
-      "rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden",
-      isActive ? "border-accent ring-1 ring-accent/20" : "border-slate-200"
-    )}>
+    <Card
+      onClick={onSelect}
+      className={cn(
+        "rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden cursor-pointer",
+        isActive ? "border-accent ring-1 ring-accent/20" : "border-slate-200"
+      )}
+    >
       {/* Active indicator */}
       {isActive && (
         <div className="h-1 bg-gradient-to-r from-accent to-violet-400 w-full" />
@@ -236,25 +336,67 @@ function ProjectCard({ project, isActive, onActivate, onDelete, onEdit }: {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer">
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl w-44">
-              <DropdownMenuItem className="text-xs cursor-pointer" onClick={onActivate}>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onActivate();
+                }}
+              >
                 <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Set as Active
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs cursor-pointer" onClick={openInDesigner}>
-                <Sparkles className="mr-2 h-3.5 w-3.5" /> Open in Designer
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInChatbot();
+                }}
+              >
+                <Sparkles className="mr-2 h-3.5 w-3.5" /> Open in Chatbot
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs cursor-pointer" onClick={openInCanvas}>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInDesigner();
+                }}
+              >
+                <LayoutTemplate className="mr-2 h-3.5 w-3.5" /> Open in Designer
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInCanvas();
+                }}
+              >
                 <CircuitBoard className="mr-2 h-3.5 w-3.5" /> Open in Canvas
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs cursor-pointer" onClick={onEdit}>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
                 <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs text-rose-600 cursor-pointer" onClick={onDelete}>
+              <DropdownMenuItem
+                className="text-xs text-rose-600 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -294,7 +436,10 @@ function ProjectCard({ project, isActive, onActivate, onDelete, onEdit }: {
             {project.status.replace("_", " ")}
           </Badge>
           <button
-            onClick={openInDesigner}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
             className="flex items-center gap-1 text-[10px] font-bold text-accent hover:underline cursor-pointer"
           >
             Open <ArrowRight className="h-3 w-3" />
@@ -311,6 +456,7 @@ function ProjectsPage() {
   const { projects, activeProject, setActiveProject, refreshProjects, createAndActivate, backendOnline } = useProject();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedProjectForOptions, setSelectedProjectForOptions] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -347,6 +493,12 @@ function ProjectsPage() {
           <CreateModal
             onClose={() => setShowCreate(false)}
             onCreate={createAndActivate}
+          />
+        )}
+        {selectedProjectForOptions && (
+          <ProjectOptionsModal
+            project={selectedProjectForOptions}
+            onClose={() => setSelectedProjectForOptions(null)}
           />
         )}
       </AnimatePresence>
@@ -483,6 +635,10 @@ function ProjectsPage() {
                     project={p}
                     isActive={activeProject?.id === p.id}
                     onActivate={() => setActiveProject(p)}
+                    onSelect={() => {
+                      setActiveProject(p);
+                      setSelectedProjectForOptions(p);
+                    }}
                     onDelete={() => handleDelete(p.id)}
                     onEdit={() => { setEditingId(p.id); setEditName(p.name); }}
                   />

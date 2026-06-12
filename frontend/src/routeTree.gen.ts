@@ -18,6 +18,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
+import { Route as AuthSessionTimeoutRouteImport } from './routes/_auth/session-timeout'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AppVersionControlRouteImport } from './routes/_app/version-control'
 import { Route as AppVerificationRouteImport } from './routes/_app/verification'
@@ -41,6 +42,7 @@ import { Route as AppBillingRouteImport } from './routes/_app/billing'
 import { Route as AppArchitectureExplorerRouteImport } from './routes/_app/architecture-explorer'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppAboutRouteImport } from './routes/_app/about'
+import { Route as AuthAuthGithubCallbackRouteImport } from './routes/_auth/auth/github/callback'
 
 const OurTeamRoute = OurTeamRouteImport.update({
   id: '/our-team',
@@ -83,6 +85,11 @@ const AuthSignUpRoute = AuthSignUpRouteImport.update({
 const AuthSignInRoute = AuthSignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSessionTimeoutRoute = AuthSessionTimeoutRouteImport.update({
+  id: '/session-timeout',
+  path: '/session-timeout',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
@@ -200,6 +207,11 @@ const AppAboutRoute = AppAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => AppRoute,
 } as any)
+const AuthAuthGithubCallbackRoute = AuthAuthGithubCallbackRouteImport.update({
+  id: '/auth/github/callback',
+  path: '/auth/github/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -230,8 +242,10 @@ export interface FileRoutesByFullPath {
   '/verification': typeof AppVerificationRoute
   '/version-control': typeof AppVersionControlRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
+  '/session-timeout': typeof AuthSessionTimeoutRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/auth/github/callback': typeof AuthAuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -262,8 +276,10 @@ export interface FileRoutesByTo {
   '/verification': typeof AppVerificationRoute
   '/version-control': typeof AppVersionControlRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
+  '/session-timeout': typeof AuthSessionTimeoutRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/auth/github/callback': typeof AuthAuthGithubCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -297,8 +313,10 @@ export interface FileRoutesById {
   '/_app/verification': typeof AppVerificationRoute
   '/_app/version-control': typeof AppVersionControlRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/_auth/session-timeout': typeof AuthSessionTimeoutRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
+  '/_auth/auth/github/callback': typeof AuthAuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -331,8 +349,10 @@ export interface FileRouteTypes {
     | '/verification'
     | '/version-control'
     | '/forgot-password'
+    | '/session-timeout'
     | '/sign-in'
     | '/sign-up'
+    | '/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -363,8 +383,10 @@ export interface FileRouteTypes {
     | '/verification'
     | '/version-control'
     | '/forgot-password'
+    | '/session-timeout'
     | '/sign-in'
     | '/sign-up'
+    | '/auth/github/callback'
   id:
     | '__root__'
     | '/'
@@ -397,8 +419,10 @@ export interface FileRouteTypes {
     | '/_app/verification'
     | '/_app/version-control'
     | '/_auth/forgot-password'
+    | '/_auth/session-timeout'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
+    | '/_auth/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -474,6 +498,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof AuthSignInRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/session-timeout': {
+      id: '/_auth/session-timeout'
+      path: '/session-timeout'
+      fullPath: '/session-timeout'
+      preLoaderRoute: typeof AuthSessionTimeoutRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/forgot-password': {
@@ -637,6 +668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAboutRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_auth/auth/github/callback': {
+      id: '/_auth/auth/github/callback'
+      path: '/auth/github/callback'
+      fullPath: '/auth/github/callback'
+      preLoaderRoute: typeof AuthAuthGithubCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
@@ -694,14 +732,18 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface AuthRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthSessionTimeoutRoute: typeof AuthSessionTimeoutRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
+  AuthAuthGithubCallbackRoute: typeof AuthAuthGithubCallbackRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthSessionTimeoutRoute: AuthSessionTimeoutRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
+  AuthAuthGithubCallbackRoute: AuthAuthGithubCallbackRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

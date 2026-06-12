@@ -188,7 +188,7 @@ interface LayoutCanvasProps {
 
 function LayoutCanvas({
   layers, layoutData, onSelectComponent, selectedId,
-  showGrid, showRuler, zoom, setZoom, pan, setPan,
+  showGrid, showRuler, onShowGridChange, onShowRulerChange, zoom, setZoom, pan, setPan,
 }: LayoutCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

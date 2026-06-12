@@ -21,6 +21,17 @@ async function api<T>(path: string, options: RequestInit = {}, fallback?: T): Pr
     ...options,
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("qs_token");
+        localStorage.removeItem("silicofeller.auth.user");
+        localStorage.removeItem("qs.active_project_id");
+        localStorage.removeItem("silicofeller.designer.conversations.v2");
+        if (!window.location.pathname.includes("/sign-in") && !window.location.pathname.includes("/session-timeout")) {
+          window.location.href = "/session-timeout";
+        }
+      }
+    }
     const msg = await res.text().catch(() => "Unknown error");
     throw new Error(`API ${res.status}: ${msg}`);
   }
@@ -214,10 +225,14 @@ export async function compileQCLang(
   });
 }
 
-export interface MetalCodeRequest {
-  components: Array<Record<string, unknown>>;
-  connections: Array<Record<string, unknown>>;
-  variables: Record<string, unknown>;
+export interface MetalCodeRequest<
+  TComponent = Record<string, unknown>,
+  TConnection = Record<string, unknown>,
+  TVariables = Record<string, unknown>,
+> {
+  components: TComponent[];
+  connections: TConnection[];
+  variables: TVariables;
 }
 
 export interface MetalCodeResponse {
@@ -227,7 +242,11 @@ export interface MetalCodeResponse {
   component_count: number;
 }
 
-export async function generateMetalCode(payload: MetalCodeRequest): Promise<MetalCodeResponse> {
+export async function generateMetalCode<
+  TComponent = Record<string, unknown>,
+  TConnection = Record<string, unknown>,
+  TVariables = Record<string, unknown>,
+>(payload: MetalCodeRequest<TComponent, TConnection, TVariables>): Promise<MetalCodeResponse> {
   return api<MetalCodeResponse>("/api/generate/metal-code", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -430,17 +449,107 @@ export async function registerUser(
   email: string,
   password: string,
   organization: string,
-) {
-  const data = await api("/api/auth/register", {
+): Promise<{ detail: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password, organization }),
   });
-  const d = data as { access_token?: string };
-  if (d.access_token && typeof window !== "undefined") {
-    localStorage.setItem("qs_token", d.access_token);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(body.detail ?? "Registration failed");
+  }
+  return res.json();
+}
+
+interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    organization: string;
+    initials: string;
+  };
+}
+
+export async function verifyOTP(email: string, otp: string): Promise<AuthResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Verification failed" }));
+    throw new Error(body.detail ?? "Verification failed");
+  }
+  const data: AuthResponse = await res.json();
+  try {
+    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("qs_token", data.access_token);
+      console.log("[API] verifyOTP: token stored in localStorage");
+    }
+  } catch (e) {
+    console.warn("[API] verifyOTP: failed to store token", e);
   }
   return data;
 }
+
+export async function resendOTP(email: string): Promise<{ detail: string }> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/resend-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to resend code" }));
+    throw new Error(body.detail ?? "Failed to resend code");
+  }
+  return res.json();
+}
+
+export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: idToken }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Google login failed" }));
+    throw new Error(body.detail ?? "Google login failed");
+  }
+  const data: AuthResponse = await res.json();
+  try {
+    if (data.access_token && typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem("qs_token", data.access_token);
+      console.log("[API] loginWithGoogle: token stored in localStorage");
+    }
+  } catch (e) {
+    console.warn("[API] loginWithGoogle: failed to store token", e);
+  }
+  return data;
+}
+
+export async function getCurrentUser(token: string): Promise<AuthResponse["user"]> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error("Session expired");
+  }
+  return res.json();
+}
+
+export function initiateGithubLogin(): void {
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000").replace(
+    /\/$/,
+    "",
+  );
+  window.location.href = `${backendUrl}/api/auth/github/authorize`;
+}
+
 
 // ── Client-side fallback generator ───────────────────────────────────────────
 // Keeps the designer working even when backend is offline.
@@ -503,9 +612,7 @@ function _buildClientResult(prompt: string, substrate: string, metal: string): G
     const qName = `Q${i + 1}`;
     const roName = `RO_${qName}`;
     const group = i % 2 === 0;
-    qubitFreqs[qName] = parseFloat(
-      (freq + (group ? -0.1 : 0.1) + ((i * 0.013) % 0.06)).toFixed(4),
-    );
+    qubitFreqs[qName] = parseFloat((freq + (group ? -0.1 : 0.1) + ((i * 0.013) % 0.06)).toFixed(4));
     EJ[qName] = parseFloat((12.8 + ((i * 0.1) % 0.5)).toFixed(3));
     EC[qName] = parseFloat((0.285 + ((i * 0.002) % 0.01)).toFixed(5));
     resFreqs[roName] = parseFloat((qubitFreqs[qName] + 1.5 + ((i * 0.02) % 0.1)).toFixed(4));
@@ -592,7 +699,8 @@ function _buildClientPlacementEdges(numQubits: number, topology: string): Placem
     const r = Math.floor(i / cols);
     const c = i % cols;
     if (c + 1 < cols && i + 1 < numQubits) addEdge(i, i + 1, `bus_h_${i + 1}_${i + 2}`);
-    if (r + 1 < rows && i + cols < numQubits) addEdge(i, i + cols, `bus_v_${i + 1}_${i + cols + 1}`);
+    if (r + 1 < rows && i + cols < numQubits)
+      addEdge(i, i + cols, `bus_v_${i + 1}_${i + cols + 1}`);
   }
   return edges;
 }
