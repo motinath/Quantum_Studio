@@ -51,6 +51,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── Qiskit Metal Bridge ────────────────────────────────────────────────────
+  # Provides /components, /design/render, /design/generate-code, /design/run-code
+  # Required by the Schematic Editor for live component discovery and rendering.
+  bridge:
+    build:
+      context: ./editor/backend
+      dockerfile: Dockerfile
+    environment:
+      BRIDGE_HOST: "0.0.0.0"
+      BRIDGE_PORT: "8000"
+      BRIDGE_LOG_LEVEL: "info"
+      QISKIT_METAL_HEADLESS: "1"
+      MPLBACKEND: "Agg"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
   # ── Frontend ───────────────────────────────────────────────────────────────
   frontend:
     build:
@@ -58,10 +75,12 @@ services:
       dockerfile: Dockerfile
     environment:
       VITE_BACKEND_URL: http://localhost:5000
+      VITE_BRIDGE_URL: http://localhost:8000
     ports:
       - "3000:3000"
     depends_on:
       - backend
+      - bridge
     restart: unless-stopped
 
 volumes:

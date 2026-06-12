@@ -344,7 +344,7 @@ function DetailPanel({ c, onClose }: { c: QiskitComponent; onClose: () => void }
 
         <section className="flex items-center gap-2">
           <Button asChild size="sm" className="flex-1 rounded-xl">
-            <Link to="/quantum-editor">Use in editor</Link>
+            <Link to="/schematic-editor">Use in editor</Link>
           </Button>
           <Button asChild size="sm" variant="outline" className="rounded-xl">
             <a

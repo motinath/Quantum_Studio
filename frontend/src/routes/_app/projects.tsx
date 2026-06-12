@@ -198,7 +198,7 @@ function ProjectCard({ project, isActive, onActivate, onDelete, onEdit }: {
 
   const openInCanvas = () => {
     onActivate();
-    navigate({ to: "/quantum-editor" });
+    navigate({ to: "/schematic-editor" });
   };
 
   return (
@@ -421,7 +421,7 @@ function ProjectsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate({ to: "/quantum-editor" })}
+                    onClick={() => navigate({ to: "/schematic-editor" })}
                     className="rounded-xl text-xs font-bold h-8 border-accent/20 hover:bg-white"
                   >
                     <Network className="h-3.5 w-3.5 mr-1.5 text-accent" /> Canvas
@@ -495,3 +495,4 @@ function ProjectsPage() {
     </div>
   );
 }
+

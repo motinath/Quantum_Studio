@@ -1,224 +1,247 @@
-import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { type RefObject, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  Undo2,
-  Redo2,
-  ShieldCheck,
-  RefreshCw,
-  Download,
-  ChevronDown,
-  Copy,
-  FileCode2,
-  FileJson,
-  FileBox,
+  Undo2, Redo2, MousePointer2, Hand, Code2, Maximize,
+  Layers, Save, Download, ChevronDown, FileCode2, PenLine, FilePlus, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { generateMetalCode } from "@/lib/api/backend";
-import type { EditorAction, EditorState } from "./editor-types";
-import { exportToGDS, exportToJSON, exportToPython, runDRC } from "./editor-types";
+import { cn } from "@/lib/utils";
+import { type Tool } from "@/lib/editor/design-store";
+import { useWorkspace } from "@/lib/editor/workspace-store";
+import type { CodePanelMode } from "./code-ide-panel";
+import type { EditorCanvasHandle } from "./editor-canvas";
 
 interface Props {
-  state: EditorState;
-  dispatch: React.Dispatch<EditorAction>;
-  circuitName: string;
-  conversationId: string | null;
+  libOpen: boolean;
+  onToggleLib: () => void;
+  onFitView: () => void;
+  onShowCode: (mode: CodePanelMode) => void;
+  canvasRef: RefObject<EditorCanvasHandle | null>;
 }
 
-function download(filename: string, content: string, mime = "text/plain") {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
+function triggerDownload(url: string, filename: string) {
+  Object.assign(document.createElement("a"), { href: url, download: filename }).click();
   URL.revokeObjectURL(url);
 }
 
-export function EditorToolbar({ state, dispatch, circuitName, conversationId }: Props) {
-  const navigate = useNavigate();
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-  const qubitCount = state.components.filter(
-    (c) => c.type === "TransmonPocket" || c.type === "TransmonCross",
-  ).length;
+export function EditorToolbar({ libOpen, onToggleLib, onFitView, onShowCode, canvasRef }: Props) {
+  const { activeTab, dispatchActive, saveAll } = useWorkspace();
+  const state    = activeTab.state;
+  const dispatch = dispatchActive;
+  const canUndo  = state.past.length > 0;
+  const canRedo  = state.future.length > 0;
+  const qc       = useQueryClient();
 
-  const runDrcCheck = () => {
-    const report = runDRC(state);
-    if (report.passed)
-      toast.success(
-        `DRC passed · ${report.violations.length} warning${report.violations.length === 1 ? "" : "s"}`,
+  const setTool = (t: Tool) => dispatch({ type: "SET_TOOL", tool: t });
+
+  const handleSave = useCallback(() => { saveAll(); toast.success("Design saved"); }, [saveAll]);
+
+  const handleDelete = useCallback(() => {
+    dispatch({ type: "LOAD", doc: { placements: [], connections: [] } });
+    dispatch({ type: "ZOOM", zoom: 1 });
+    dispatch({ type: "PAN", x: 0, y: 0 });
+    dispatch({ type: "SELECT", selection: null });
+    qc.removeQueries({ queryKey: ["bridge", "render"] });
+    toast.success("Canvas cleared");
+  }, [dispatch, qc]);
+
+  const downloadSVG = useCallback(() => {
+    const svg = canvasRef.current?.getSvgElement();
+    if (!svg) { toast.error("Nothing to export"); return; }
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    triggerDownload(
+      URL.createObjectURL(new Blob([clone.outerHTML], { type: "image/svg+xml" })),
+      "schematic.svg",
+    );
+    toast.success("SVG downloaded");
+  }, [canvasRef]);
+
+  const downloadRaster = useCallback((format: "png" | "jpg") => {
+    const svg = canvasRef.current?.getSvgElement();
+    if (!svg) { toast.error("Nothing to export"); return; }
+    const { width, height } = svg.getBoundingClientRect();
+    const scale = 2;
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", String(width * scale));
+    clone.setAttribute("height", String(height * scale));
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale; canvas.height = height * scale;
+      const ctx = canvas.getContext("2d")!;
+      if (format === "jpg") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (blob) => { if (!blob) return; triggerDownload(URL.createObjectURL(blob), `schematic.${format}`); toast.success(`${format.toUpperCase()} downloaded`); },
+        format === "jpg" ? "image/jpeg" : "image/png",
+        0.95,
       );
-    else
-      toast.error(
-        `DRC failed · ${report.violations.length} issue${report.violations.length === 1 ? "" : "s"}`,
-      );
-  };
-
-  const rebuild = () => {
-    // Force a rev bump so downstream sync re-runs
-    dispatch({ type: "ZOOM", zoom: state.zoom });
-    toast.success("Layout rebuilt");
-  };
-
-  const generateCode = async () => {
-    setIsGeneratingCode(true);
-    try {
-      const result = await generateMetalCode({
-        components: state.components,
-        connections: state.connections,
-        variables: state.variables as unknown as Record<string, unknown>,
-      });
-      download(`${circuitName || "circuit"}_metal.py`, result.code, "text/x-python");
-      if (result.warnings.length > 0) {
-        toast.warning(`Generated with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}`);
-      } else {
-        toast.success("Qiskit Metal code generated");
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to generate code");
-    } finally {
-      setIsGeneratingCode(false);
-    }
-  };
-  const back = () => {
-    navigate({ to: "/designer" });
-  };
+    };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+  }, [canvasRef]);
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="flex h-12 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur shrink-0">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={back}
-            className="h-8 gap-1.5 rounded-lg text-slate-700 hover:bg-slate-100"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Designer
-          </Button>
-          <span className="h-4 w-px bg-slate-200" />
-          <span className="text-xs font-black text-slate-900">
-            {circuitName || "Untitled Circuit"}
+      <div className="flex h-11 shrink-0 items-center gap-1.5 border-b border-border bg-card px-3">
+        {/* Branding */}
+        <div className="flex items-center gap-1 mr-1">
+          <span className="text-sm font-bold text-foreground">Silicofeller</span>
+          <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+            Schematic
           </span>
-          <Badge
-            variant="secondary"
-            className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 border border-indigo-100"
-          >
-            {qubitCount} Qubit{qubitCount === 1 ? "" : "s"}
-          </Badge>
         </div>
+        <Separator orientation="vertical" className="h-6" />
 
-        <div className="flex items-center gap-1.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost" size="sm"
+              onClick={() => dispatch({ type: "LOAD", doc: { placements: [], connections: [] } })}
+              className="h-8 gap-1.5 text-[11px] text-muted-foreground"
+            >
+              <FilePlus className="h-3.5 w-3.5" /> New
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>New empty canvas</TooltipContent>
+        </Tooltip>
+
+        <Separator orientation="vertical" className="h-6" />
+        <TB icon={MousePointer2} label="Select" active={state.tool === "select"} onClick={() => setTool("select")} />
+        <TB icon={Hand}          label="Pan"    active={state.tool === "pan"}    onClick={() => setTool("pan")} />
+        <Separator orientation="vertical" className="h-6" />
+        <TB icon={Undo2} label="Undo (Ctrl+Z)"       onClick={() => dispatch({ type: "UNDO" })} disabled={!canUndo} />
+        <TB icon={Redo2} label="Redo (Ctrl+Shift+Z)" onClick={() => dispatch({ type: "REDO" })} disabled={!canRedo} />
+
+        <div className="ml-auto flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => dispatch({ type: "UNDO" })}
-                disabled={state.past.length === 0}
-                className="h-8 w-8 rounded-lg"
+                variant={libOpen ? "secondary" : "ghost"} size="sm" onClick={onToggleLib}
+                className={cn("h-8 gap-1.5 text-[11px]", libOpen && "bg-primary/10 text-primary hover:bg-primary/15")}
               >
-                <Undo2 className="h-4 w-4" />
+                <Layers className="h-3.5 w-3.5" /> Components
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Undo</TooltipContent>
+            <TooltipContent>{libOpen ? "Hide library" : "Show library"}</TooltipContent>
           </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" onClick={onFitView} className="h-8 gap-1.5 text-[11px]">
+                <Maximize className="h-3.5 w-3.5" /> Fit View
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Fit all components into view (F)</TooltipContent>
+          </Tooltip>
+
+          <Separator orientation="vertical" className="h-6" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" onClick={handleSave} className="h-8 gap-1.5 text-[11px]">
+                <Save className="h-3.5 w-3.5" /> Save
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Save design (Ctrl+S)</TooltipContent>
+          </Tooltip>
+
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[11px]">
+                    <Download className="h-3.5 w-3.5" /> Download <ChevronDown className="h-3 w-3 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Export canvas as image</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuItem className="gap-2 text-[12px]" onSelect={downloadSVG}>
+                <Download className="h-3.5 w-3.5" /> SVG
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-[12px]" onSelect={() => downloadRaster("png")}>
+                <Download className="h-3.5 w-3.5" /> PNG
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-[12px]" onSelect={() => downloadRaster("jpg")}>
+                <Download className="h-3.5 w-3.5" /> JPG
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Separator orientation="vertical" className="h-6" />
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => dispatch({ type: "REDO" })}
-                disabled={state.future.length === 0}
-                className="h-8 w-8 rounded-lg"
+                variant="outline" size="sm" onClick={handleDelete}
+                className="h-8 gap-1.5 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
-                <Redo2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" /> Clear
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Redo</TooltipContent>
+            <TooltipContent>Clear entire canvas (all components + connections)</TooltipContent>
           </Tooltip>
-          <span className="mx-1 h-4 w-px bg-slate-200" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={runDrcCheck}
-            className="h-8 gap-1.5 rounded-lg text-xs"
-          >
-            <ShieldCheck className="h-3.5 w-3.5" /> Run DRC
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={rebuild}
-            className="h-8 gap-1.5 rounded-lg text-xs"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Rebuild
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={generateCode}
-            disabled={isGeneratingCode || state.components.length === 0}
-            className="h-8 gap-1.5 rounded-lg text-xs"
-          >
-            <FileCode2 className="h-3.5 w-3.5" /> {isGeneratingCode ? "Generating" : "Generate Code"}
-          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                className="h-8 gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs text-white hover:bg-indigo-700"
-              >
-                <Download className="h-3.5 w-3.5" /> Export <ChevronDown className="h-3 w-3" />
+              <Button size="sm" className="h-8 gap-1.5 text-[11px]">
+                <Code2 className="h-3.5 w-3.5" /> Code <ChevronDown className="h-3 w-3 opacity-70" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem
-                onClick={() =>
-                  download(`${circuitName || "circuit"}.py`, exportToPython(state), "text/x-python")
-                }
-              >
-                <FileCode2 className="mr-2 h-3.5 w-3.5" /> Download .py
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="gap-2 text-[12px]" onSelect={() => onShowCode("generate")}>
+                <FileCode2 className="h-3.5 w-3.5 text-primary" />
+                <div>
+                  <div className="font-semibold">Generate Code</div>
+                  <div className="text-[10px] text-muted-foreground">Design → Python</div>
+                </div>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => download(`${circuitName || "circuit"}.gds`, exportToGDS(state))}
-              >
-                <FileBox className="mr-2 h-3.5 w-3.5" /> Download .gds
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  download(
-                    `${circuitName || "circuit"}.json`,
-                    exportToJSON(state),
-                    "application/json",
-                  )
-                }
-              >
-                <FileJson className="mr-2 h-3.5 w-3.5" /> Download .json
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  navigator.clipboard.writeText(exportToPython(state));
-                  toast.success("Python copied to clipboard");
-                }}
-              >
-                <Copy className="mr-2 h-3.5 w-3.5" /> Copy Python
+              <DropdownMenuItem className="gap-2 text-[12px]" onSelect={() => onShowCode("write")}>
+                <PenLine className="h-3.5 w-3.5 text-emerald-600" />
+                <div>
+                  <div className="font-semibold">Write Code</div>
+                  <div className="text-[10px] text-muted-foreground">Python → Canvas</div>
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
     </TooltipProvider>
+  );
+}
+
+function TB({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  disabled,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost" size="icon" onClick={onClick} disabled={disabled}
+          className={cn("h-8 w-8 rounded-md", active && "bg-primary/10 text-primary hover:bg-primary/15")}
+        >
+          <Icon className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

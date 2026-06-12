@@ -1,71 +1,162 @@
-import { useState } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { LIBRARY } from "./editor-types";
-import type { ComponentCategory, ComponentKind } from "./editor-types";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "motion/react";
+import { ChevronDown, ChevronRight, Search, Box, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { componentsQueryOptions, componentPreviewQueryOptions } from "@/lib/bridge/queries";
+import type { ComponentCategory, ComponentSummary } from "@/lib/bridge/types";
 
-const ORDER: ComponentCategory[] = [
+const CATEGORY_ORDER: ComponentCategory[] = [
   "qubits",
   "resonators",
   "couplers",
-  "tlines",
+  "routes",
+  "launchpads",
+  "ground",
   "terminations",
-  "lumped",
-  "sample shapes",
+  "other",
 ];
 
 export function ComponentLibrary() {
-  const [open, setOpen] = useState<Record<string, boolean>>({ qubits: true, resonators: true });
+  return <LibraryContent />;
+}
+
+function LibraryContent() {
+  const [filter,  setFilter]  = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState<Partial<Record<ComponentCategory, boolean>>>({
+    qubits: true,
+    routes: true,
+  });
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const { data = [], isLoading, isError } = useQuery({
+    ...componentsQueryOptions(),
+    enabled: mounted,
+  });
+
+  const grouped: Record<ComponentCategory, ComponentSummary[]> = {
+    qubits: [], resonators: [], couplers: [], routes: [],
+    launchpads: [], ground: [], terminations: [], other: [],
+  };
+  const q = filter.trim().toLowerCase();
+  for (const c of data) {
+    if (q && !c.name.toLowerCase().includes(q) && !c.id.toLowerCase().includes(q)) continue;
+    (grouped[c.category] ?? grouped.other).push(c);
+  }
 
   return (
-    <div className="flex flex-col gap-1 text-xs">
-      <p className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-        Library
-      </p>
-      {ORDER.map((cat) => {
-        const items = LIBRARY[cat];
-        const isOpen = open[cat] ?? false;
-        return (
-          <div key={cat} className="flex flex-col">
-            <button
-              onClick={() => setOpen((s) => ({ ...s, [cat]: !isOpen }))}
-              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-left text-[11px] font-bold text-slate-700 hover:bg-slate-100"
-            >
-              {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {cat}
-            </button>
-            {isOpen && (
-              <div className="ml-4 flex flex-col gap-0.5 border-l border-slate-100 pl-2 py-1">
-                {items.map((d) => (
-                  <LibraryItem key={`${cat}-${d.type}`} label={d.label} type={d.type} />
-                ))}
+    <div className="flex h-full flex-col gap-2 text-xs">
+      <div className="px-1 pb-1">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          Component Library
+        </p>
+        <p className="text-[10px] text-muted-foreground/80">
+          From bridge{mounted && data.length > 0 && ` · ${data.length} components`}
+        </p>
+      </div>
+
+      <div className="relative px-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter components"
+          className="h-7 pl-7 text-[11px]"
+        />
+      </div>
+
+      {(!mounted || isLoading) && (
+        <div className="flex flex-1 items-center justify-center gap-2 text-[11px] text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading components…
+        </div>
+      )}
+
+      {mounted && isError && (
+        <div className="px-2 py-2 text-[11px] text-destructive">
+          Failed to load components. Is the bridge running?
+        </div>
+      )}
+
+      {mounted && !isLoading && !isError && (
+        <div className="flex-1 space-y-1 overflow-y-auto px-1 pb-2">
+          {CATEGORY_ORDER.map((cat) => {
+            const items = grouped[cat];
+            if (items.length === 0) return null;
+            const isOpen = open[cat] ?? false;
+            return (
+              <div key={cat} className="overflow-hidden rounded-md border border-border bg-card">
+                <button
+                  type="button"
+                  onClick={() => setOpen((s) => ({ ...s, [cat]: !isOpen }))}
+                  className="flex w-full items-center justify-between border-b border-border bg-muted/40 px-2 py-1.5 text-left text-[11px] font-semibold text-foreground hover:bg-muted"
+                >
+                  <span className="capitalize">{cat}</span>
+                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    {items.length}
+                    {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  </span>
+                </button>
+                {isOpen && (
+                  <div className="grid grid-cols-2 gap-1.5 p-1.5">
+                    {items.map((c) => <LibraryItem key={c.id} component={c} />)}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })}
-      <p className="mt-2 px-1 text-[10px] text-slate-400">Drag onto the canvas to place.</p>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-function LibraryItem({ label, type }: { label: string; type: ComponentKind }) {
+function LibraryItem({ component }: { component: ComponentSummary }) {
   const [dragging, setDragging] = useState(false);
+  const previewQ = useQuery(componentPreviewQueryOptions(component.id));
+
   return (
-    <div
+    <motion.div
       draggable
+      animate={{ scale: dragging ? 0.95 : 1, opacity: dragging ? 0.6 : 1 }}
+      transition={{ duration: 0.12 }}
       onDragStart={(e) => {
-        e.dataTransfer.setData("application/x-quantum-component", type);
-        e.dataTransfer.effectAllowed = "copy";
+        const dt = (e as unknown as DragEvent).dataTransfer;
+        if (dt) {
+          dt.setData("application/x-silicofeller-component", component.id);
+          dt.effectAllowed = "copy";
+        }
         setDragging(true);
       }}
       onDragEnd={() => setDragging(false)}
       className={cn(
-        "cursor-grab rounded-md border border-transparent px-2 py-1 text-[11px] font-semibold text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/40 hover:text-indigo-700 active:cursor-grabbing",
-        dragging && "opacity-50",
+        "group flex cursor-grab flex-col items-center gap-1 rounded-md border border-border bg-background p-1.5 transition-all hover:border-primary hover:shadow-sm active:cursor-grabbing",
       )}
+      title={`${component.name} — ${component.description ?? component.category}`}
     >
-      {label}
-    </div>
+      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded bg-muted/40">
+        {previewQ.data?.svg ? (
+          <svg
+            viewBox={`${previewQ.data.viewBox.x} ${previewQ.data.viewBox.y} ${previewQ.data.viewBox.w} ${previewQ.data.viewBox.h}`}
+            className="h-full w-full"
+            color="currentColor"
+            dangerouslySetInnerHTML={{ __html: previewQ.data.svg }}
+          />
+        ) : previewQ.isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : (
+          <Box className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+        )}
+      </div>
+      <span
+        className="w-full truncate text-center text-[10px] font-semibold leading-tight text-foreground"
+        title={component.name}
+      >
+        {component.name}
+      </span>
+    </motion.div>
   );
 }

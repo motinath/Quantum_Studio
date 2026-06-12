@@ -18,21 +18,19 @@ import { cn } from "@/lib/utils";
 type Msg = { role: "user" | "assistant"; content: string; loading?: boolean };
 
 const CONTEXT_HINTS: Record<string, string> = {
-  "/designer":            "designer",
-  "/quantum-editor":      "canvas",
-  "/schematic-editor":    "canvas",
-  "/layout-viewer":       "layout",
+  "/designer":              "designer",
+  "/schematic-editor":      "canvas",
+  "/layout-viewer":         "layout",
   "/architecture-explorer": "designer",
-  "/verification":        "verification",
-  "/physics-analysis":    "physics",
-  "/simulations":         "physics",
+  "/verification":          "verification",
+  "/physics-analysis":      "physics",
+  "/simulations":           "physics",
 };
 
 const PAGE_SUGGESTIONS: Record<string, string[]> = {
   "/designer":         ["Suggest a heavy-hex topology for 27 qubits", "What substrate gives best T₁?", "Explain transmon vs fluxonium"],
   "/verification":     ["Why did my frequency check fail?", "What causes ZZ crosstalk?", "How do I fix a DRC violation?"],
-  "/schematic-editor": ["Generate a 5-qubit ring in QCLang", "What does connect(Q0,Q1) mean?", "Show me a fluxonium example"],
-  "/quantum-editor":   ["How do I connect two qubits in the canvas?", "What is a CPW waveguide?", "Explain TransmonPocket parameters"],
+  "/schematic-editor": ["How do I connect two qubits in the canvas?", "What is a CPW waveguide?", "Explain TransmonPocket parameters"],
   "/physics-analysis": ["What is anharmonicity?", "Explain T1 and T2 times", "How does substrate affect coherence?"],
   "/simulations":      ["What does eigenmode simulation compute?", "Explain Q factor", "What is driven modal simulation?"],
   default:             ["What is SILICOFELLER Quantum Studio?", "How do I start a new chip design?", "Explain the design workflow"],

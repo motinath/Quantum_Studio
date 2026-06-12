@@ -27,7 +27,6 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSchematicEditorRouteImport } from './routes/_app/schematic-editor'
 import { Route as AppResultsRouteImport } from './routes/_app/results'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
-import { Route as AppQuantumEditorRouteImport } from './routes/_app/quantum-editor'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppPhysicsAnalysisRouteImport } from './routes/_app/physics-analysis'
@@ -130,11 +129,6 @@ const AppReportsRoute = AppReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AppRoute,
 } as any)
-const AppQuantumEditorRoute = AppQuantumEditorRouteImport.update({
-  id: '/quantum-editor',
-  path: '/quantum-editor',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppProjectsRoute = AppProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -220,7 +214,6 @@ export interface FileRoutesByFullPath {
   '/physics-analysis': typeof AppPhysicsAnalysisRoute
   '/profile': typeof AppProfileRoute
   '/projects': typeof AppProjectsRoute
-  '/quantum-editor': typeof AppQuantumEditorRoute
   '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
   '/schematic-editor': typeof AppSchematicEditorRoute
@@ -252,7 +245,6 @@ export interface FileRoutesByTo {
   '/physics-analysis': typeof AppPhysicsAnalysisRoute
   '/profile': typeof AppProfileRoute
   '/projects': typeof AppProjectsRoute
-  '/quantum-editor': typeof AppQuantumEditorRoute
   '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
   '/schematic-editor': typeof AppSchematicEditorRoute
@@ -287,7 +279,6 @@ export interface FileRoutesById {
   '/_app/physics-analysis': typeof AppPhysicsAnalysisRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/projects': typeof AppProjectsRoute
-  '/_app/quantum-editor': typeof AppQuantumEditorRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/results': typeof AppResultsRoute
   '/_app/schematic-editor': typeof AppSchematicEditorRoute
@@ -303,102 +294,99 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-  | '/'
-  | '/blog'
-  | '/community'
-  | '/documentation'
-  | '/our-team'
-  | '/about'
-  | '/admin'
-  | '/architecture-explorer'
-  | '/billing'
-  | '/component-library'
-  | '/dashboard'
-  | '/designer'
-  | '/fault-tolerance'
-  | '/integrations'
-  | '/layout-viewer'
-  | '/physics-analysis'
-  | '/profile'
-  | '/projects'
-  | '/quantum-editor'
-  | '/reports'
-  | '/results'
-  | '/schematic-editor'
-  | '/settings'
-  | '/simulations'
-  | '/team'
-  | '/verification'
-  | '/version-control'
-  | '/forgot-password'
-  | '/sign-in'
-  | '/sign-up'
+    | '/'
+    | '/blog'
+    | '/community'
+    | '/documentation'
+    | '/our-team'
+    | '/about'
+    | '/admin'
+    | '/architecture-explorer'
+    | '/billing'
+    | '/component-library'
+    | '/dashboard'
+    | '/designer'
+    | '/fault-tolerance'
+    | '/integrations'
+    | '/layout-viewer'
+    | '/physics-analysis'
+    | '/profile'
+    | '/projects'
+    | '/reports'
+    | '/results'
+    | '/schematic-editor'
+    | '/settings'
+    | '/simulations'
+    | '/team'
+    | '/verification'
+    | '/version-control'
+    | '/forgot-password'
+    | '/sign-in'
+    | '/sign-up'
   fileRoutesByTo: FileRoutesByTo
   to:
-  | '/'
-  | '/blog'
-  | '/community'
-  | '/documentation'
-  | '/our-team'
-  | '/about'
-  | '/admin'
-  | '/architecture-explorer'
-  | '/billing'
-  | '/component-library'
-  | '/dashboard'
-  | '/designer'
-  | '/fault-tolerance'
-  | '/integrations'
-  | '/layout-viewer'
-  | '/physics-analysis'
-  | '/profile'
-  | '/projects'
-  | '/quantum-editor'
-  | '/reports'
-  | '/results'
-  | '/schematic-editor'
-  | '/settings'
-  | '/simulations'
-  | '/team'
-  | '/verification'
-  | '/version-control'
-  | '/forgot-password'
-  | '/sign-in'
-  | '/sign-up'
+    | '/'
+    | '/blog'
+    | '/community'
+    | '/documentation'
+    | '/our-team'
+    | '/about'
+    | '/admin'
+    | '/architecture-explorer'
+    | '/billing'
+    | '/component-library'
+    | '/dashboard'
+    | '/designer'
+    | '/fault-tolerance'
+    | '/integrations'
+    | '/layout-viewer'
+    | '/physics-analysis'
+    | '/profile'
+    | '/projects'
+    | '/reports'
+    | '/results'
+    | '/schematic-editor'
+    | '/settings'
+    | '/simulations'
+    | '/team'
+    | '/verification'
+    | '/version-control'
+    | '/forgot-password'
+    | '/sign-in'
+    | '/sign-up'
   id:
-  | '__root__'
-  | '/'
-  | '/_app'
-  | '/_auth'
-  | '/blog'
-  | '/community'
-  | '/documentation'
-  | '/our-team'
-  | '/_app/about'
-  | '/_app/admin'
-  | '/_app/architecture-explorer'
-  | '/_app/billing'
-  | '/_app/component-library'
-  | '/_app/dashboard'
-  | '/_app/designer'
-  | '/_app/fault-tolerance'
-  | '/_app/integrations'
-  | '/_app/layout-viewer'
-  | '/_app/physics-analysis'
-  | '/_app/profile'
-  | '/_app/projects'
-  | '/_app/quantum-editor'
-  | '/_app/reports'
-  | '/_app/results'
-  | '/_app/schematic-editor'
-  | '/_app/settings'
-  | '/_app/simulations'
-  | '/_app/team'
-  | '/_app/verification'
-  | '/_app/version-control'
-  | '/_auth/forgot-password'
-  | '/_auth/sign-in'
-  | '/_auth/sign-up'
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_auth'
+    | '/blog'
+    | '/community'
+    | '/documentation'
+    | '/our-team'
+    | '/_app/about'
+    | '/_app/admin'
+    | '/_app/architecture-explorer'
+    | '/_app/billing'
+    | '/_app/component-library'
+    | '/_app/dashboard'
+    | '/_app/designer'
+    | '/_app/fault-tolerance'
+    | '/_app/integrations'
+    | '/_app/layout-viewer'
+    | '/_app/physics-analysis'
+    | '/_app/profile'
+    | '/_app/projects'
+    | '/_app/reports'
+    | '/_app/results'
+    | '/_app/schematic-editor'
+    | '/_app/settings'
+    | '/_app/simulations'
+    | '/_app/team'
+    | '/_app/verification'
+    | '/_app/version-control'
+    | '/_auth/forgot-password'
+    | '/_auth/sign-in'
+    | '/_auth/sign-up'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -539,13 +527,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReportsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/quantum-editor': {
-      id: '/_app/quantum-editor'
-      path: '/quantum-editor'
-      fullPath: '/quantum-editor'
-      preLoaderRoute: typeof AppQuantumEditorRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/projects': {
       id: '/_app/projects'
       path: '/projects'
@@ -654,7 +635,6 @@ interface AppRouteChildren {
   AppPhysicsAnalysisRoute: typeof AppPhysicsAnalysisRoute
   AppProfileRoute: typeof AppProfileRoute
   AppProjectsRoute: typeof AppProjectsRoute
-  AppQuantumEditorRoute: typeof AppQuantumEditorRoute
   AppReportsRoute: typeof AppReportsRoute
   AppResultsRoute: typeof AppResultsRoute
   AppSchematicEditorRoute: typeof AppSchematicEditorRoute
@@ -679,7 +659,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppPhysicsAnalysisRoute: AppPhysicsAnalysisRoute,
   AppProfileRoute: AppProfileRoute,
   AppProjectsRoute: AppProjectsRoute,
-  AppQuantumEditorRoute: AppQuantumEditorRoute,
   AppReportsRoute: AppReportsRoute,
   AppResultsRoute: AppResultsRoute,
   AppSchematicEditorRoute: AppSchematicEditorRoute,

@@ -45,7 +45,6 @@ function AppLayout() {
     "/architecture-explorer": "Architecture Explorer",
     "/schematic-editor": "Schematic Editor",
     "/layout-viewer": "Layout Viewer",
-    "/quantum-editor": "Quantum Editor",
     "/component-library": "Component Library",
     "/simulations": "Simulations",
     "/physics-analysis": "Physics Analysis",

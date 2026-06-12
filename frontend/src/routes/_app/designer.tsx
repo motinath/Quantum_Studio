@@ -399,7 +399,7 @@ function DesignerPage() {
                   </span>
                 )}
                 <Link
-                  to="/quantum-editor"
+                  to="/schematic-editor"
                   search={{ conversationId: activeId ?? undefined } as never}
                   className="inline-flex h-7 items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 text-[10px] font-bold text-violet-700 hover:bg-violet-100 transition-colors"
                 >
@@ -1842,3 +1842,4 @@ function CodeView({ result }: { result: GenerateResponse }) {
     </Card>
   );
 }
+
